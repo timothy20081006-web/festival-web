@@ -2,18 +2,21 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>現場叫號</title>
+    <title>叫號系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .num-anim { animation: pulse 2s infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        body { background-color: #000; overflow: hidden; }
+        .glow-text { text-shadow: 0 0 40px rgba(255, 255, 255, 0.7); }
     </style>
 </head>
-<body class="bg-zinc-900 text-white h-screen flex flex-col items-center p-10 overflow-hidden" onclick="enableAudio()">
-    <h1 class="text-6xl font-bold text-yellow-400 mb-10 mt-10">📢 請準備取餐</h1>
-    <div id="readyArea" class="flex flex-wrap justify-center gap-12 text-[18rem] font-black leading-none">
+<body class="h-screen flex flex-col items-center justify-center p-10" onclick="start()">
+    <div id="hint" class="fixed top-0 w-full bg-emerald-600 text-white py-4 text-center text-2xl font-black animate-pulse cursor-pointer">
+        請點擊螢幕開啟「語音叫號」
+    </div>
+
+    <h2 class="text-emerald-500 text-4xl font-bold tracking-[1.5em] mb-20 ml-[1.5em] opacity-80 uppercase">Now Ready</h2>
+    <div id="readyArea" class="flex flex-wrap justify-center gap-24 text-[26rem] font-black text-white glow-text">
         </div>
-    <p class="mt-auto text-gray-500 text-2xl">點擊畫面以開啟語音叫號</p>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
@@ -26,41 +29,30 @@
             projectId: "school-festival-pos-f2c1e"
         }));
 
-        let readySet = new Set();
-        let audioEnabled = false;
-
-        window.enableAudio = () => {
-            audioEnabled = true;
-            alert("語音叫號功能已啟用！");
-        };
+        let readySet = new Set(); let canSpeak = false;
+        window.start = () => { canSpeak = true; document.getElementById('hint').remove(); };
 
         onValue(ref(db, 'orders'), (snapshot) => {
             const data = snapshot.val();
             const area = document.getElementById('readyArea');
             area.innerHTML = '';
-            
-            const currentReady = [];
-            for(let id in data) {
-                if(data[id].status === 'ready') {
-                    currentReady.push(data[id].orderNum);
-                    
-                    // 偵測到新叫號
-                    if(!readySet.has(data[id].orderNum)) {
-                        speak(data[id].orderNum);
+            const current = [];
+            for (let id in data) {
+                if (data[id].status === 'ready') {
+                    const n = data[id].orderNum;
+                    current.push(n);
+                    if (!readySet.has(n)) {
+                        if (canSpeak) {
+                            const u = new SpeechSynthesisUtterance(`請 ${n} 號取餐`);
+                            u.lang = 'zh-TW'; u.rate = 0.85;
+                            window.speechSynthesis.speak(u);
+                        }
                     }
                 }
             }
-            
-            area.innerHTML = currentReady.map(num => `<span class="num-anim text-white">${num}</span>`).join('');
-            readySet = new Set(currentReady);
+            area.innerHTML = current.map(n => `<span class="animate-bounce">${n}</span>`).join('');
+            readySet = new Set(current);
         });
-
-        function speak(num) {
-            if(!audioEnabled) return;
-            const msg = new SpeechSynthesisUtterance(`請 ${num} 號同學到攤位取餐`);
-            msg.lang = 'zh-TW';
-            window.speechSynthesis.speak(msg);
-        }
     </script>
 </body>
 </html>
