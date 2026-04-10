@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>現場叫號</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .num-anim { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body class="bg-zinc-900 text-white h-screen flex flex-col items-center p-10 overflow-hidden" onclick="enableAudio()">
+    <h1 class="text-6xl font-bold text-yellow-400 mb-10 mt-10">📢 請準備取餐</h1>
+    <div id="readyArea" class="flex flex-wrap justify-center gap-12 text-[18rem] font-black leading-none">
+        </div>
+    <p class="mt-auto text-gray-500 text-2xl">點擊畫面以開啟語音叫號</p>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+
+        const db = getDatabase(initializeApp({
+            apiKey: "AIzaSyBw2axh4vgkOnNEsUgYbkmmV71TJN5Yzqc",
+            authDomain: "school-festival-pos-f2c1e.firebaseapp.com",
+            databaseURL: "https://school-festival-pos-f2c1e-default-rtdb.firebaseio.com",
+            projectId: "school-festival-pos-f2c1e"
+        }));
+
+        let readySet = new Set();
+        let audioEnabled = false;
+
+        window.enableAudio = () => {
+            audioEnabled = true;
+            alert("語音叫號功能已啟用！");
+        };
+
+        onValue(ref(db, 'orders'), (snapshot) => {
+            const data = snapshot.val();
+            const area = document.getElementById('readyArea');
+            area.innerHTML = '';
+            
+            const currentReady = [];
+            for(let id in data) {
+                if(data[id].status === 'ready') {
+                    currentReady.push(data[id].orderNum);
+                    
+                    // 偵測到新叫號
+                    if(!readySet.has(data[id].orderNum)) {
+                        speak(data[id].orderNum);
+                    }
+                }
+            }
+            
+            area.innerHTML = currentReady.map(num => `<span class="num-anim text-white">${num}</span>`).join('');
+            readySet = new Set(currentReady);
+        });
+
+        function speak(num) {
+            if(!audioEnabled) return;
+            const msg = new SpeechSynthesisUtterance(`請 ${num} 號同學到攤位取餐`);
+            msg.lang = 'zh-TW';
+            window.speechSynthesis.speak(msg);
+        }
+    </script>
+</body>
+</html>
