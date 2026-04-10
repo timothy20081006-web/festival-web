@@ -2,37 +2,73 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>叫號系統</title>
+    <title>校慶冰淇淋叫號螢幕</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { background-color: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
-        .glow-text { text-shadow: 0 0 50px rgba(255, 255, 255, 0.7); }
+        .glow-text { text-shadow: 0 0 60px rgba(255, 255, 255, 0.8); }
+        .number-item { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
-<body class="h-screen flex flex-col items-center justify-center">
-    <div class="text-emerald-500 text-5xl font-black tracking-[1.5em] mb-20 ml-[1.5em] opacity-80 uppercase">Now Ready</div>
-    <div id="readyArea" class="flex flex-wrap justify-center gap-24 text-[28rem] font-black text-white glow-text"></div>
-    <div class="fixed bottom-10 text-zinc-800 text-xl font-bold tracking-widest uppercase">Ice Cream Pickup</div>
+<body class="h-screen flex flex-col items-center justify-center p-10">
+    
+    <div class="text-emerald-500 text-6xl font-black tracking-[1.5em] mb-24 ml-[1.5em] opacity-90 uppercase">
+        Now Ready
+    </div>
+    
+    <div id="readyArea" class="flex flex-wrap justify-center items-center gap-24 text-[28rem] font-black text-white glow-text">
+        </div>
+
+    <div class="fixed bottom-12 text-zinc-800 text-2xl font-bold tracking-[0.5em] uppercase">
+        Ice Cream Pickup System
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
         import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
+        // 完整 Config 貼上
         const firebaseConfig = {
             apiKey: "AIzaSyBw2axh4vgkOnNEsUgYbkmmV71TJN5Yzqc",
             authDomain: "school-festival-pos-f2c1e.firebaseapp.com",
             databaseURL: "https://school-festival-pos-f2c1e-default-rtdb.firebaseio.com",
-            projectId: "school-festival-pos-f2c1e"
+            projectId: "school-festival-pos-f2c1e",
+            storageBucket: "school-festival-pos-f2c1e.firebasestorage.app",
+            messagingSenderId: "135308112776",
+            appId: "1:135308112776:web:6935bd537916dbbda9c03d"
         };
+
         const db = getDatabase(initializeApp(firebaseConfig));
 
+        // 即時監聽訂單狀態
         onValue(ref(db, 'orders'), (snapshot) => {
             const data = snapshot.val();
             const area = document.getElementById('readyArea');
             area.innerHTML = '';
-            const current = [];
-            for (let id in data) { if (data[id].status === 'ready') current.push(data[id].orderNum); }
-            area.innerHTML = current.map(n => `<span class="animate-pulse">${n}</span>`).join('');
+            
+            const readyNumbers = [];
+            for (let id in data) {
+                // 只抓取狀態為 'ready' (後台點擊叫號) 的訂單
+                if (data[id].status === 'ready') {
+                    readyNumbers.push(data[id].orderNum);
+                }
+            }
+
+            // 如果沒有號碼，顯示提示或留空
+            if (readyNumbers.length === 0) {
+                area.innerHTML = '<span class="text-zinc-900 text-8xl tracking-widest uppercase">Waiting...</span>';
+            } else {
+                // 將所有準確號碼渲染出來
+                area.innerHTML = readyNumbers.map(n => `
+                    <div class="number-item animate-pulse">
+                        ${n}
+                    </div>
+                `).join('');
+            }
         });
     </script>
 </body>
