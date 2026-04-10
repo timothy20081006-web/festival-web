@@ -2,36 +2,41 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>校慶冰淇淋叫號螢幕</title>
+    <title>校慶冰淇淋叫號系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
-        .glow-text { text-shadow: 0 0 60px rgba(255, 255, 255, 0.8); }
-        .number-item { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        body { background-color: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; color: white; }
+        .glow-ready { text-shadow: 0 0 50px rgba(52, 211, 153, 0.6); }
+        .number-ready { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes popIn {
             0% { transform: scale(0.5); opacity: 0; }
             100% { transform: scale(1); opacity: 1; }
         }
     </style>
 </head>
-<body class="h-screen flex flex-col items-center justify-center p-10">
-    
-    <div class="text-emerald-500 text-6xl font-black tracking-[1.5em] mb-24 ml-[1.5em] opacity-90 uppercase">
-        Now Ready
-    </div>
-    
-    <div id="readyArea" class="flex flex-wrap justify-center items-center gap-24 text-[28rem] font-black text-white glow-text">
-        </div>
+<body class="h-screen flex flex-row">
 
-    <div class="fixed bottom-12 text-zinc-800 text-2xl font-bold tracking-[0.5em] uppercase">
-        Ice Cream Pickup System
+    <div class="w-1/3 border-r border-zinc-800 flex flex-col p-10 bg-zinc-950">
+        <h2 class="text-zinc-500 text-3xl font-black mb-10 tracking-widest uppercase">Preparing <br><span class="text-lg font-normal opacity-50">製作中</span></h2>
+        <div id="waitingArea" class="flex flex-wrap gap-6 text-5xl font-bold text-zinc-400">
+            </div>
+    </div>
+
+    <div class="w-2/3 flex flex-col p-10 bg-black relative">
+        <h2 class="text-emerald-500 text-3xl font-black mb-10 tracking-[0.5em] uppercase">Now Ready <br><span class="text-lg font-normal text-emerald-700">請至櫃檯取餐</span></h2>
+        
+        <div id="readyArea" class="flex flex-wrap justify-center content-start gap-x-16 gap-y-8 w-full text-[18rem] font-black text-white glow-ready">
+            </div>
+
+        <div class="absolute bottom-10 right-10 text-zinc-800 text-xl font-bold tracking-widest">
+            ICE CREAM PICKUP SYSTEM
+        </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
         import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
-        // 完整 Config 貼上
         const firebaseConfig = {
             apiKey: "AIzaSyBw2axh4vgkOnNEsUgYbkmmV71TJN5Yzqc",
             authDomain: "school-festival-pos-f2c1e.firebaseapp.com",
@@ -44,27 +49,38 @@
 
         const db = getDatabase(initializeApp(firebaseConfig));
 
-        // 即時監聽訂單狀態
         onValue(ref(db, 'orders'), (snapshot) => {
             const data = snapshot.val();
-            const area = document.getElementById('readyArea');
-            area.innerHTML = '';
+            const waitingArea = document.getElementById('waitingArea');
+            const readyArea = document.getElementById('readyArea');
             
-            const readyNumbers = [];
+            waitingArea.innerHTML = '';
+            readyArea.innerHTML = '';
+            
+            const waitingList = [];
+            const readyList = [];
+
             for (let id in data) {
-                // 只抓取狀態為 'ready' (後台點擊叫號) 的訂單
-                if (data[id].status === 'ready') {
-                    readyNumbers.push(data[id].orderNum);
+                const order = data[id];
+                if (order.status === 'waiting') {
+                    waitingList.push(order.orderNum);
+                } else if (order.status === 'ready') {
+                    readyList.push(order.orderNum);
                 }
             }
 
-            // 如果沒有號碼，顯示提示或留空
-            if (readyNumbers.length === 0) {
-                area.innerHTML = '<span class="text-zinc-900 text-8xl tracking-widest uppercase">Waiting...</span>';
+            // 渲染製作中 (排序一下讓號碼整齊)
+            waitingList.sort((a,b) => a-b);
+            waitingArea.innerHTML = waitingList.map(n => `
+                <div class="bg-zinc-900 px-4 py-2 rounded-xl border border-zinc-800">${n}</div>
+            `).join('');
+
+            // 渲染請取餐
+            if (readyList.length === 0) {
+                readyArea.innerHTML = '<div class="mt-20 text-zinc-900 text-6xl tracking-widest opacity-30">WELCOME</div>';
             } else {
-                // 將所有準確號碼渲染出來
-                area.innerHTML = readyNumbers.map(n => `
-                    <div class="number-item animate-pulse">
+                readyArea.innerHTML = readyList.map(n => `
+                    <div class="number-ready animate-pulse">
                         ${n}
                     </div>
                 `).join('');
