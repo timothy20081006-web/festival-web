@@ -2,29 +2,62 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>後台管理 - 簡潔版</title>
+    <title>管理後台</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #020617; color: #f1f5f9; }
+        .stat-card { background: linear-gradient(145deg, #0f172a, #020617); border: 1px solid #1e293b; }
+    </style>
 </head>
-<body class="bg-gray-50 text-gray-900 p-4">
-    <div class="max-w-2xl mx-auto">
-        <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border">
-            <div>
-                <p class="text-xs text-gray-400 font-bold">TOTAL REVENUE</p>
-                <h2 id="totalRevenue" class="text-2xl font-black text-blue-600">$ 0</h2>
-            </div>
-            <div class="text-right">
-                <p class="text-xs text-gray-400 font-bold">TOTAL ORDERS</p>
-                <h2 id="totalOrders" class="text-2xl font-black text-gray-700">0</h2>
+<body class="p-4 md:p-8">
+
+    <button onclick="toggleSidebar()" class="fixed top-6 right-6 z-50 bg-pink-600 p-3 rounded-2xl shadow-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
+    </button>
+
+    <div id="sidebar" class="fixed top-0 right-0 h-full w-64 bg-slate-800 z-40 translate-x-full transition-transform shadow-2xl p-8 border-l border-slate-700">
+        <h2 class="text-pink-500 font-black text-xl mb-10 mt-10">功能選單</h2>
+        <nav class="space-y-6">
+            <button onclick="showPage('home')" class="block w-full text-left font-bold text-slate-300">🏠 首頁控制</button>
+            <button onclick="showPage('history')" class="block w-full text-left font-bold text-slate-300">📋 訂單紀錄</button>
+            <button onclick="showPage('stock')" class="block w-full text-left font-bold text-slate-300">📊 庫存消耗</button>
+        </nav>
+    </div>
+
+    <main class="max-w-6xl mx-auto">
+        <div id="page-home" class="page-content">
+            <header class="flex justify-between items-center mb-10">
+                <h1 class="text-3xl font-black">控制台</h1>
+                <div class="stat-card px-8 py-4 rounded-3xl text-right">
+                    <p class="text-[10px] text-slate-500 font-bold uppercase">總營收</p>
+                    <h2 id="totalRevenue" class="text-3xl font-black text-pink-500">$ 0</h2>
+                </div>
+            </header>
+            <div id="active-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </div>
+
+        <div id="page-history" class="page-content hidden">
+            <h2 class="text-3xl font-black mb-8">訂單紀錄</h2>
+            <div class="bg-slate-800 rounded-3xl overflow-hidden border border-slate-700">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-700 text-slate-400 text-xs"><tr><th class="px-6 py-4">號碼</th><th class="px-6 py-4">內容</th><th class="px-6 py-4">金額</th></tr></thead>
+                    <tbody id="history-table-body" class="divide-y divide-slate-700"></tbody>
+                </table>
             </div>
         </div>
 
-        <div id="list" class="space-y-3">
+        <div id="page-stock" class="page-content hidden">
+            <h2 class="text-3xl font-black mb-8">庫存統計</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="stat-card p-6 rounded-3xl"><h3 class="text-pink-500 font-bold mb-4">主餐(球)</h3><div id="stock-main" class="space-y-2"></div></div>
+                <div class="stat-card p-6 rounded-3xl"><h3 class="text-indigo-400 font-bold mb-4">配料(份)</h3><div id="stock-topping" class="space-y-2"></div></div>
             </div>
-    </div>
+        </div>
+    </main>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
-        import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+        import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBw2axh4vgkOnNEsUgYbkmmV71TJN5Yzqc",
@@ -34,39 +67,36 @@
         };
         const db = getDatabase(initializeApp(firebaseConfig));
 
+        window.toggleSidebar = () => document.getElementById('sidebar').classList.toggle('translate-x-full');
+        window.showPage = (p) => { document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden')); document.getElementById('page-' + p).classList.remove('hidden'); toggleSidebar(); };
+
         onValue(ref(db, 'orders'), (snapshot) => {
             const data = snapshot.val();
-            const listDiv = document.getElementById('list');
-            let rev = 0, count = 0; 
-            listDiv.innerHTML = '';
+            let rev = 0; const activeList = document.getElementById('active-list');
+            const historyBody = document.getElementById('history-table-body');
+            const stockMain = { "椰奶": 0, "荔枝": 0, "Oreo": 0 };
+            const stockTop = { "珍珠": 0, "寒天": 0, "碎餅乾": 0, "棉花糖": 0, "脆迪酥": 0 };
+            activeList.innerHTML = ''; historyBody.innerHTML = '';
 
-            const entries = Object.entries(data || {}).sort((a, b) => b[1].timestamp - a[1].timestamp);
+            for (let id in data) {
+                const order = data[id]; rev += (order.price || 0);
+                const itemStr = order.items || "";
+                for(let k in stockMain) { stockMain[k] += (itemStr.match(new RegExp(k, "g")) || []).length; }
+                for(let k in stockTop) { stockTop[k] += (itemStr.match(new RegExp(k, "g")) || []).length; }
 
-            entries.forEach(([id, order]) => {
-                rev += (order.price || 0); count++;
-                if (order.status === 'done') return;
-
-                const item = document.createElement('div');
-                item.className = `flex justify-between items-center p-4 rounded-xl border bg-white shadow-sm ${order.status === 'ready' ? 'border-green-500 ring-2 ring-green-100' : 'border-gray-200'}`;
-                item.innerHTML = `
-                    <div class="flex items-center gap-4">
-                        <span class="text-2xl font-black w-12">#${order.orderNum}</span>
-                        <div>
-                            <p class="text-sm font-bold text-gray-700">${order.items}</p>
-                            <p class="text-xs text-gray-400">$${order.price}</p>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        ${order.status === 'waiting' ? 
-                            `<button onclick="u('${id}', 'ready')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold">叫號</button>` :
-                            `<button onclick="u('${id}', 'done')" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold">結案</button>`
-                        }
-                    </div>
-                `;
-                listDiv.appendChild(item);
-            });
+                if (order.status !== 'done') {
+                    const card = document.createElement('div');
+                    card.className = `stat-card p-6 rounded-[2rem] border-t-4 ${order.status === 'ready' ? 'border-green-500' : 'border-pink-500'}`;
+                    card.innerHTML = `<div class="flex justify-between items-start mb-4"><span class="text-4xl font-black">#${order.orderNum}</span><span>$${order.price}</span></div><p class="text-slate-400 text-sm mb-6">${order.items}</p><div class="flex gap-2">${order.status === 'waiting' ? `<button onclick="u('${id}', 'ready')" class="flex-1 bg-pink-600 py-3 rounded-xl">叫號</button>` : `<button onclick="u('${id}', 'done')" class="flex-1 bg-green-600 py-3 rounded-xl">結案</button>`}</div>`;
+                    activeList.appendChild(card);
+                }
+                const row = document.createElement('tr');
+                row.innerHTML = `<td class="px-6 py-4 font-black">#${order.orderNum}</td><td class="px-6 py-4 text-slate-400 text-sm">${order.items}</td><td class="px-6 py-4 text-pink-400">$${order.price}</td>`;
+                historyBody.prepend(row);
+            }
             document.getElementById('totalRevenue').innerText = `$ ${rev}`;
-            document.getElementById('totalOrders').innerText = count;
+            document.getElementById('stock-main').innerHTML = Object.entries(stockMain).map(([k, v]) => `<div class="flex justify-between border-b border-slate-800 pb-2"><span>${k}</span><span>${v} 球</span></div>`).join('');
+            document.getElementById('stock-topping').innerHTML = Object.entries(stockTop).map(([k, v]) => `<div class="flex justify-between border-b border-slate-800 pb-2"><span>${k}</span><span>${v} 份</span></div>`).join('');
         });
         window.u = (id, s) => update(ref(db, 'orders/' + id), { status: s });
     </script>

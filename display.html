@@ -2,89 +2,37 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>叫號中心 - 雙欄版</title>
+    <title>叫號系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #000; font-family: 'Arial Black', sans-serif; }
-        .ready-num { animation: pulse 1s infinite; text-shadow: 0 0 30px rgba(74, 222, 128, 0.5); }
-        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        body { background-color: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
+        .glow-text { text-shadow: 0 0 50px rgba(255, 255, 255, 0.7); }
     </style>
 </head>
-<body class="h-screen flex flex-col overflow-hidden" onclick="startAudio()">
-    <div id="hint" class="bg-blue-600 text-white py-3 text-center text-xl font-bold cursor-pointer">
-        📢 點擊螢幕開啟語音叫號功能
-    </div>
-
-    <div class="flex flex-1 overflow-hidden">
-        <div class="w-1/3 border-r border-gray-800 flex flex-col">
-            <div class="bg-gray-900 py-6 text-center">
-                <h2 class="text-blue-400 text-3xl font-black tracking-widest uppercase">Preparing</h2>
-                <p class="text-blue-900 text-xs mt-1 italic">餐點製作中</p>
-            </div>
-            <div id="waitingArea" class="flex-1 p-8 flex flex-wrap content-start gap-4 overflow-y-auto">
-                </div>
-        </div>
-
-        <div class="w-2/3 flex flex-col bg-zinc-950">
-            <div class="bg-emerald-950/30 py-6 text-center border-b border-emerald-900/50">
-                <h2 class="text-emerald-400 text-5xl font-black tracking-[0.5em] uppercase">Ready to Pick Up</h2>
-                <p class="text-emerald-900 text-sm mt-1">請至櫃檯領取餐點</p>
-            </div>
-            <div id="readyArea" class="flex-1 p-10 flex flex-wrap justify-center items-center gap-12">
-                </div>
-        </div>
-    </div>
+<body class="h-screen flex flex-col items-center justify-center">
+    <div class="text-emerald-500 text-5xl font-black tracking-[1.5em] mb-20 ml-[1.5em] opacity-80 uppercase">Now Ready</div>
+    <div id="readyArea" class="flex flex-wrap justify-center gap-24 text-[28rem] font-black text-white glow-text"></div>
+    <div class="fixed bottom-10 text-zinc-800 text-xl font-bold tracking-widest uppercase">Ice Cream Pickup</div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
         import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
-        const db = getDatabase(initializeApp({
+        const firebaseConfig = {
             apiKey: "AIzaSyBw2axh4vgkOnNEsUgYbkmmV71TJN5Yzqc",
             authDomain: "school-festival-pos-f2c1e.firebaseapp.com",
             databaseURL: "https://school-festival-pos-f2c1e-default-rtdb.firebaseio.com",
             projectId: "school-festival-pos-f2c1e"
-        }));
-
-        let readySet = new Set();
-        let canSpeak = false;
-
-        window.startAudio = () => { canSpeak = true; document.getElementById('hint').remove(); };
+        };
+        const db = getDatabase(initializeApp(firebaseConfig));
 
         onValue(ref(db, 'orders'), (snapshot) => {
-            const data = snapshot.val() || {};
-            const waitArea = document.getElementById('waitingArea');
-            const readyArea = document.getElementById('readyArea');
-            
-            waitArea.innerHTML = '';
-            readyArea.innerHTML = '';
-            
-            const currentReady = [];
-
-            // 排序並過濾
-            Object.values(data).forEach(o => {
-                if (o.status === 'waiting') {
-                    const span = document.createElement('span');
-                    span.className = "bg-gray-800 text-gray-400 px-6 py-3 rounded-xl text-4xl font-bold";
-                    span.innerText = o.orderNum;
-                    waitArea.appendChild(span);
-                } else if (o.status === 'ready') {
-                    currentReady.push(o.orderNum);
-                    const span = document.createElement('span');
-                    span.className = "ready-num text-white text-[18rem] font-black leading-none";
-                    span.innerText = o.orderNum;
-                    readyArea.appendChild(span);
-
-                    if (!readySet.has(o.orderNum)) {
-                        if (canSpeak) {
-                            const u = new SpeechSynthesisUtterance(`請 ${o.orderNum} 號取餐`);
-                            u.lang = 'zh-TW'; u.rate = 0.9;
-                            window.speechSynthesis.speak(u);
-                        }
-                    }
-                }
-            });
-            readySet = new Set(currentReady);
+            const data = snapshot.val();
+            const area = document.getElementById('readyArea');
+            area.innerHTML = '';
+            const current = [];
+            for (let id in data) { if (data[id].status === 'ready') current.push(data[id].orderNum); }
+            area.innerHTML = current.map(n => `<span class="animate-pulse">${n}</span>`).join('');
         });
     </script>
 </body>

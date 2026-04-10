@@ -3,60 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>園遊會點餐系統</title>
+    <title>冰淇淋點餐系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Noto Sans TC', sans-serif; background: linear-gradient(135deg, #fff5f5 0%, #fff0e6 100%); }
-        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        body { font-family: 'Noto Sans TC', sans-serif; background: #fff5f7; }
+        .glass { background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(10px); }
+        .checkbox-custom:checked + label { background-color: #db2777; color: white; border-color: #db2777; }
     </style>
 </head>
-<body class="min-h-screen py-10 px-4 flex flex-col items-center">
+<body class="min-h-screen py-8 px-4 flex flex-col items-center">
     <div class="max-w-md w-full glass rounded-[2.5rem] shadow-2xl p-8 border-4 border-white">
-        <div class="text-center mb-6">
-            <span class="text-4xl">🛒</span>
-            <h1 class="text-3xl font-black text-orange-600 tracking-tighter mt-2">校慶攤位點餐</h1>
-            <p class="text-gray-400 text-xs uppercase tracking-widest mt-1">Smart Ordering System</p>
-        </div>
-        
-        <div class="space-y-4 mb-8">
-            <div class="bg-orange-50 p-4 rounded-3xl border-2 border-orange-100">
-                <label class="block text-xs font-bold text-orange-400 mb-2 ml-1">選擇餐點</label>
-                <select id="food" class="w-full bg-transparent text-lg font-bold text-gray-700 focus:outline-none appearance-none cursor-pointer">
-                    <option value="招牌大腸包小腸" data-price="50">招牌大腸包小腸 - $50</option>
-                    <option value="古早味珍珠奶茶" data-price="40">古早味珍珠奶茶 - $40</option>
-                    <option value="噴汁烤香腸" data-price="35">噴汁烤香腸 - $35</option>
-                </select>
+        <header class="text-center mb-6">
+            <span class="text-5xl">🍦</span>
+            <h1 class="text-3xl font-black text-pink-600 mt-2 tracking-tighter">校慶冰淇淋屋</h1>
+        </header>
+
+        <section class="mb-6">
+            <label class="block text-sm font-black text-pink-500 mb-3 ml-1 uppercase">Step 1. 選擇套餐</label>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="setPlan('single', 45, 2)" id="plan-single" class="plan-btn border-2 border-pink-100 rounded-2xl py-3 font-bold text-pink-600 bg-white hover:bg-pink-50 transition-all">
+                    單球套餐 $45<br><span class="text-[10px] font-normal">主餐x1, 配料x2</span>
+                </button>
+                <button onclick="setPlan('double', 80, 3)" id="plan-double" class="plan-btn border-2 border-pink-100 rounded-2xl py-3 font-bold text-pink-600 bg-white hover:bg-pink-50 transition-all">
+                    兩球套餐 $80<br><span class="text-[10px] font-normal">主餐x2, 配料x3</span>
+                </button>
             </div>
-            <button onclick="addToCart()" class="w-full bg-orange-500 text-white font-black py-4 rounded-2xl hover:bg-orange-600 transition-all shadow-lg shadow-orange-200 active:scale-95">
-                ＋ 加入購物車
-            </button>
+        </section>
+
+        <section class="mb-6 hidden" id="main-section">
+            <label class="block text-sm font-black text-pink-500 mb-3 ml-1 uppercase">Step 2. 選擇口味</label>
+            <div id="flavor-selectors" class="space-y-3"></div>
+        </section>
+
+        <section class="mb-8 hidden" id="topping-section">
+            <label class="block text-sm font-black text-pink-500 mb-3 ml-1 uppercase" id="topping-label">Step 3. 選擇配料</label>
+            <div class="flex flex-wrap gap-2">
+                <input type="checkbox" name="topping" value="珍珠" id="t1" class="hidden checkbox-custom" onchange="checkToppingLimit()">
+                <label for="t1" class="px-4 py-2 border-2 border-pink-50 rounded-full text-sm font-bold transition-all cursor-pointer">珍珠</label>
+                <input type="checkbox" name="topping" value="寒天" id="t2" class="hidden checkbox-custom" onchange="checkToppingLimit()">
+                <label for="t2" class="px-4 py-2 border-2 border-pink-50 rounded-full text-sm font-bold transition-all cursor-pointer">寒天</label>
+                <input type="checkbox" name="topping" value="碎餅乾" id="t3" class="hidden checkbox-custom" onchange="checkToppingLimit()">
+                <label for="t3" class="px-4 py-2 border-2 border-pink-50 rounded-full text-sm font-bold transition-all cursor-pointer">碎餅乾</label>
+                <input type="checkbox" name="topping" value="棉花糖" id="t4" class="hidden checkbox-custom" onchange="checkToppingLimit()">
+                <label for="t4" class="px-4 py-2 border-2 border-pink-50 rounded-full text-sm font-bold transition-all cursor-pointer">棉花糖</label>
+                <input type="checkbox" name="topping" value="脆迪酥" id="t5" class="hidden checkbox-custom" onchange="checkToppingLimit()">
+                <label for="t5" class="px-4 py-2 border-2 border-pink-50 rounded-full text-sm font-bold transition-all cursor-pointer">脆迪酥</label>
+            </div>
+            <button onclick="addToCart()" class="w-full bg-pink-500 text-white font-black py-4 rounded-3xl mt-6 shadow-lg shadow-pink-100 active:scale-95 transition-all">＋ 加入購物車</button>
+        </section>
+
+        <div class="border-t-2 border-dashed border-pink-100 pt-6">
+            <h3 class="font-bold text-slate-600 mb-4 px-2 flex justify-between">
+                <span>🛒 我的清單</span>
+                <button onclick="clearCart()" class="text-xs text-slate-300 underline font-normal">清空</button>
+            </h3>
+            <div id="cart-list" class="space-y-3 mb-6">
+                <p class="text-center text-slate-300 py-4 text-sm">購物車是空的</p>
+            </div>
+            <div class="flex justify-between items-center mb-6 px-5 bg-slate-900 text-white py-5 rounded-3xl shadow-xl">
+                <span class="font-bold opacity-60">應付總額</span>
+                <span id="total-price" class="text-3xl font-black text-pink-400">$ 0</span>
+            </div>
+            <button onclick="sendOrder()" id="btn-submit" class="w-full bg-pink-600 text-white text-xl font-black py-5 rounded-3xl shadow-xl disabled:opacity-30">確認送出訂單</button>
         </div>
 
-        <div class="mb-8">
-            <div class="flex justify-between items-center mb-3 px-2">
-                <h3 class="font-bold text-gray-700">我的購物清單</h3>
-                <button onclick="clearCart()" class="text-xs text-gray-400 hover:text-red-500">清空</button>
-            </div>
-            <div id="cart-list" class="space-y-2 min-h-[100px] max-h-[300px] overflow-y-auto bg-white/50 rounded-3xl p-4 border border-dashed border-orange-200">
-                <p class="text-center text-gray-400 text-sm mt-8">尚未加入任何餐點</p>
-            </div>
-            <div class="flex justify-between items-center mt-5 px-4 bg-orange-600 p-4 rounded-2xl text-white shadow-lg">
-                <span class="font-bold">總計金額</span>
-                <span id="total-price" class="text-3xl font-black">$ 0</span>
-            </div>
-        </div>
-
-        <button onclick="sendOrder()" id="btn-submit" class="w-full bg-slate-900 text-white text-xl font-black py-5 rounded-3xl shadow-xl disabled:opacity-50 transition-all">
-            確認送出訂單
-        </button>
-
-        <div id="result" class="mt-8 hidden animate-bounce">
-            <div class="bg-green-100 rounded-3xl p-6 border-2 border-green-200 text-center">
-                <p class="text-green-700 font-bold mb-1">訂單已送出！您的號碼</p>
-                <div id="orderNum" class="text-7xl font-black text-green-700 tracking-tighter">--</div>
-                <p class="text-xs text-green-600 mt-2">請截圖保存，憑號取餐</p>
-            </div>
+        <div id="result" class="mt-8 hidden animate-bounce bg-green-50 rounded-3xl p-6 border-2 border-green-200 text-center">
+            <p class="text-green-700 font-bold mb-1">訂單完成！您的號碼：</p>
+            <div id="orderNum" class="text-7xl font-black text-green-700 tracking-tighter">--</div>
         </div>
     </div>
 
@@ -64,7 +78,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
         import { getDatabase, ref, push, set, runTransaction } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
-        // 貼上你的 Config
         const firebaseConfig = {
             apiKey: "AIzaSyBw2axh4vgkOnNEsUgYbkmmV71TJN5Yzqc",
             authDomain: "school-festival-pos-f2c1e.firebaseapp.com",
@@ -74,66 +87,71 @@
             messagingSenderId: "135308112776",
             appId: "1:135308112776:web:6935bd537916dbbda9c03d"
         };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
+        const db = getDatabase(initializeApp(firebaseConfig));
 
         let cart = [];
+        let currentPlan = null;
 
-        window.addToCart = () => {
-            const select = document.getElementById('food');
-            const name = select.value;
-            const price = parseInt(select.options[select.selectedIndex].getAttribute('data-price'));
-            cart.push({ name, price });
-            updateCartUI();
+        window.setPlan = (type, price, topMax) => {
+            const mainCount = (type === 'single') ? 1 : 2;
+            currentPlan = { type, price, mainCount, topMax };
+            document.querySelectorAll('.plan-btn').forEach(b => b.classList.remove('bg-pink-500', 'text-white'));
+            document.getElementById('plan-' + type).classList.add('bg-pink-500', 'text-white');
+            document.getElementById('main-section').classList.remove('hidden');
+            document.getElementById('topping-section').classList.remove('hidden');
+            document.getElementById('topping-label').innerText = `Step 3. 選擇配料 (限 ${topMax} 種)`;
+
+            const flavorArea = document.getElementById('flavor-selectors');
+            flavorArea.innerHTML = '';
+            for(let i=1; i<=mainCount; i++){
+                flavorArea.innerHTML += `<div class="flex items-center gap-3"><span class="text-xs font-bold text-pink-300">口味 ${i}</span><select class="main-flavor-select flex-1 bg-pink-50 border border-pink-100 rounded-xl p-3 font-bold focus:outline-none"><option value="椰奶">椰奶冰淇淋</option><option value="荔枝">荔枝冰淇淋</option><option value="Oreo">Oreo冰淇淋</option></select></div>`;
+            }
+            document.querySelectorAll('input[name="topping"]').forEach(c => c.checked = false);
         };
 
-        window.clearCart = () => { cart = []; updateCartUI(); };
+        window.checkToppingLimit = () => {
+            const checked = document.querySelectorAll('input[name="topping"]:checked');
+            if (checked.length > currentPlan.topMax) { event.target.checked = false; alert(`最多選 ${currentPlan.topMax} 種！`); }
+        };
 
-        window.removeFromCart = (index) => { cart.splice(index, 1); updateCartUI(); };
+        window.addToCart = () => {
+            if (!currentPlan) return;
+            const mains = Array.from(document.querySelectorAll('.main-flavor-select')).map(s => s.value);
+            const tops = Array.from(document.querySelectorAll('input[name="topping"]:checked')).map(i => i.value);
+            if (tops.length !== currentPlan.topMax) return alert(`請選滿 ${currentPlan.topMax} 種配料！`);
+            const desc = `[${currentPlan.type === 'single' ? '單球' : '兩球'}] ${mains.join('+')} (${tops.join(',')})`;
+            const existIndex = cart.findIndex(i => i.desc === desc);
+            if (existIndex > -1) { cart[existIndex].count += 1; } else { cart.push({ desc, price: currentPlan.price, count: 1 }); }
+            updateUI();
+        };
 
-        function updateCartUI() {
+        window.updateQty = (index, delta) => { cart[index].count += delta; if (cart[index].count <= 0) cart.splice(index, 1); updateUI(); };
+        window.clearCart = () => { cart = []; updateUI(); };
+
+        function updateUI() {
             const list = document.getElementById('cart-list');
-            const totalDisplay = document.getElementById('total-price');
-            if (cart.length === 0) {
-                list.innerHTML = '<p class="text-center text-gray-400 text-sm mt-8">尚未加入任何餐點</p>';
-                totalDisplay.innerText = `$ 0`;
-            } else {
-                list.innerHTML = cart.map((item, index) => `
-                    <div class="flex justify-between items-center bg-white p-3 rounded-2xl shadow-sm border border-orange-50">
-                        <span class="font-bold text-gray-700">${item.name}</span>
-                        <div class="flex items-center gap-3">
-                            <span class="text-orange-500 font-bold">$${item.price}</span>
-                            <button onclick="removeFromCart(${index})" class="text-red-300 hover:text-red-500 font-bold p-1">✕</button>
-                        </div>
-                    </div>
-                `).join('');
-                totalDisplay.innerText = `$ ${cart.reduce((s, i) => s + i.price, 0)}`;
-            }
+            if (cart.length === 0) { list.innerHTML = `<p class="text-center text-slate-300 py-4 text-sm">購物車是空的</p>`; } 
+            else { list.innerHTML = cart.map((item, i) => `<div class="bg-white p-4 rounded-2xl shadow-sm border border-pink-50 flex justify-between items-center"><div class="flex-1 pr-3"><p class="font-black text-slate-700 text-sm leading-tight">${item.desc}</p><p class="text-pink-500 text-xs mt-1 font-bold">$${item.price} x ${item.count}</p></div><div class="flex items-center gap-3 bg-pink-50 rounded-full px-3 py-1"><button onclick="updateQty(${i}, -1)" class="w-6 h-6 flex items-center justify-center font-bold text-pink-500">-</button><span class="font-black text-pink-600">${item.count}</span><button onclick="updateQty(${i}, 1)" class="w-6 h-6 flex items-center justify-center font-bold text-pink-500">+</button></div></div>`).join(''); }
+            const total = cart.reduce((s, i) => s + (i.price * i.count), 0);
+            document.getElementById('total-price').innerText = `$ ${total}`;
         }
 
         window.sendOrder = async () => {
-            if (cart.length === 0) return alert("購物車目前是空的！");
+            if (cart.length === 0) return;
             const btn = document.getElementById('btn-submit');
-            btn.disabled = true; btn.innerText = "處理中...";
-
+            btn.disabled = true;
             try {
-                const total = cart.reduce((s, i) => s + i.price, 0);
-                const itemsString = cart.map(i => i.name).join(', ');
-
+                const finalTotal = cart.reduce((s, i) => s + (i.price * i.count), 0);
+                const finalItems = cart.map(i => `${i.desc} x${i.count}`).join(' | ');
                 const result = await runTransaction(ref(db, 'currentNumber'), (cur) => (cur || 100) + 1);
                 if (result.committed) {
                     const nextNum = result.snapshot.val();
-                    await set(push(ref(db, 'orders')), {
-                        orderNum: nextNum, items: itemsString, price: total, status: 'waiting', timestamp: Date.now()
-                    });
+                    await set(push(ref(db, 'orders')), { orderNum: nextNum, items: finalItems, price: finalTotal, status: 'waiting', timestamp: Date.now() });
                     document.getElementById('orderNum').innerText = nextNum;
                     document.getElementById('result').classList.remove('hidden');
-                    btn.innerText = "完成點餐";
-                    btn.classList.replace('bg-slate-900', 'bg-green-500');
-                    cart = []; updateCartUI();
+                    btn.innerText = "完成！"; cart = []; updateUI();
                 }
-            } catch (e) { alert("發送失敗，請重試"); btn.disabled = false; }
+            } catch (e) { btn.disabled = false; }
         };
     </script>
 </body>
