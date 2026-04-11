@@ -8,151 +8,45 @@
     <style>
         body { font-family: sans-serif; background: #fff5f7; }
         .plan-btn.active { background-color: #db2777; color: white; border-color: #db2777; }
+        .cart-card { border-left: 5px solid #db2777; }
     </style>
 </head>
-<body class="p-4 flex flex-col items-center">
+<body class="p-4 pb-24 flex flex-col items-center">
     
-    <div class="max-w-md w-full bg-white rounded-3xl shadow-xl p-6 border border-pink-100 relative mt-10">
-        <div class="absolute -top-10 -left-10 text-8xl opacity-10 rotate-12 z-0">🍦</div>
-        <div class="absolute -bottom-10 -right-10 text-8xl opacity-10 -rotate-12 z-0">👀</div>
-
-        <h1 class="text-2xl font-black text-center text-pink-600 mb-6 relative z-10">Look In My Ice 🍦👀</h1>
+    <div class="max-w-md w-full bg-white rounded-3xl shadow-xl p-6 border border-pink-100 relative mt-4">
+        <h1 class="text-2xl font-black text-center text-pink-600 mb-6">Look In My Ice 🍦👀</h1>
         
         <div class="grid grid-cols-2 gap-2 mb-6">
             <button onclick="setPlan('single', 67, 1)" id="plan-single" class="plan-btn border-2 p-3 rounded-xl font-bold text-pink-600 transition-all">1球套餐 $67</button>
             <button onclick="setPlan('double', 100, 2)" id="plan-double" class="plan-btn border-2 p-3 rounded-xl font-bold text-pink-600 transition-all">2球套餐 $100</button>
         </div>
 
-        <div id="order-area" class="hidden relative z-10">
-            <div class="mb-6">
-                <p class="font-bold mb-2 text-gray-700">選擇口味：</p>
-                <div id="flavor-selectors" class="space-y-2">
-                    </div>
-            </div>
-
-            <div class="mb-6 relative">
-                <p id="top-title" class="font-bold mb-2 text-gray-700">選擇配料：</p>
-                <div class="space-y-2" id="topping-list">
-                    </div>
-                <button onclick="addToCart()" class="w-full bg-pink-500 text-white font-bold py-4 rounded-xl mt-6 shadow-lg hover:bg-pink-600 transition-all">確認送出訂單</button>
-            </div>
+        <div id="order-area" class="hidden border-t pt-4">
+            <div id="flavor-selectors" class="mb-4 space-y-2"></div>
+            <p id="top-title" class="font-bold mb-2 text-pink-600 text-sm"></p>
+            <div id="topping-list" class="space-y-2 mb-4"></div>
+            <button onclick="addToCart()" class="w-full bg-pink-500 text-white font-bold py-3 rounded-xl shadow-lg active:scale-95 transition-all">
+                加入購物車
+            </button>
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
-        import { getDatabase, ref, push, set, runTransaction } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
-
-        // Firebase 設定
-        const firebaseConfig = {
-            apiKey: "AIzaSyBw2axh4vgkOnNEsUgYbkmmV71TJN5Yzqc",
-            authDomain: "school-festival-pos-f2c1e.firebaseapp.com",
-            databaseURL: "https://school-festival-pos-f2c1e-default-rtdb.firebaseio.com",
-            projectId: "school-festival-pos-f2c1e",
-            storageBucket: "school-festival-pos-f2c1e.firebasestorage.app",
-            messagingSenderId: "135308112776",
-            appId: "1:135308112776:web:6935bd537916dbbda9c03d"
-        };
-
-        const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
-        const db = getDatabase(app);
-
-        let curPlan = null;
-        let curTops = {"珍珠":0,"寒天":0,"碎餅乾":0,"棉花糖":0,"脆迪酥":0};
-
-        // 1. 選擇套餐邏輯
-        window.setPlan = (id, price, mainCnt) => {
-            // 規則：1球配2份，2球配3份
-            const topLimit = (mainCnt === 1) ? 2 : 3;
-            curPlan = { id, price, mainCnt, topLimit };
-            
-            // 更新按鈕樣式
-            document.querySelectorAll('.plan-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById('plan-'+id).classList.add('active');
-            
-            // 顯示點餐區域
-            document.getElementById('order-area').classList.remove('hidden');
-            document.getElementById('top-title').innerText = `選擇配料 (限 ${topLimit} 份)：`;
-
-            // 動態生成口味選單
-            const flavorArea = document.getElementById('flavor-selectors');
-            flavorArea.innerHTML = '';
-            for(let i=1; i<=mainCnt; i++) {
-                flavorArea.innerHTML += `
-                    <select class="f-sel w-full border-2 p-3 rounded-xl font-bold bg-gray-50 mb-2 focus:border-pink-500 outline-none">
-                        <option value="椰奶">椰奶</option>
-                        <option value="荔枝">荔枝</option>
-                        <option value="Oreo">Oreo</option>
-                    </select>`;
-            }
-            
-            // 重設配料數量並刷新 UI
-            Object.keys(curTops).forEach(k => curTops[k] = 0);
-            updateTopUI();
-        };
-
-        // 2. 配料增減邏輯
-        window.changeTop = (name, delta) => {
-            const currentTotal = Object.values(curTops).reduce((a, b) => a + b, 0);
-            
-            if (delta > 0 && currentTotal >= curPlan.topLimit) {
-                alert(`這份套餐配料上限是 ${curPlan.topLimit} 份喔！`);
-                return;
-            }
-            if (delta < 0 && curTops[name] <= 0) return;
-            
-            curTops[name] += delta;
-            updateTopUI();
-        };
-
-        // 3. 刷新配料介面
-        function updateTopUI() {
-            const topArea = document.getElementById('topping-list');
-            topArea.innerHTML = Object.keys(curTops).map(name => `
-                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
-                    <span class="font-bold">${name}</span>
-                    <div class="flex items-center gap-4">
-                        <button onclick="changeTop('${name}', -1)" class="w-8 h-8 border-2 border-pink-200 rounded-full font-bold bg-white">-</button>
-                        <span class="font-black w-4 text-center text-pink-600">${curTops[name]}</span>
-                        <button onclick="changeTop('${name}', 1)" class="w-8 h-8 border-2 border-pink-200 rounded-full font-bold bg-white">+</button>
-                    </div>
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Look In My Ice 🍦👀</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { font-family: sans-serif; background: #fff5f7; }
-        .plan-btn.active { background-color: #db2777; color: white; border-color: #db2777; }
-    </style>
-</head>
-<body class="p-4 flex flex-col items-center">
-    
-    <div class="max-w-md w-full bg-white rounded-3xl shadow-xl p-6 border border-pink-100 relative mt-10">
-        <h1 class="text-2xl font-black text-center text-pink-600 mb-6">Look In My Ice 🍦👀</h1>
+    <div id="cart-container" class="max-w-md w-full mt-6 hidden">
+        <div class="flex justify-between items-center mb-3 px-2">
+            <h3 class="font-black text-lg text-gray-700">🛒 待送出訂單</h3>
+            <button onclick="clearCart()" class="text-red-400 text-xs font-bold underline">全部清空</button>
+        </div>
         
-        <div class="grid grid-cols-2 gap-2 mb-6">
-            <button onclick="setPlan('single', 67, 1)" id="plan-single" class="plan-btn border-2 p-3 rounded-xl font-bold text-pink-600">1球套餐 $67</button>
-            <button onclick="setPlan('double', 100, 2)" id="plan-double" class="plan-btn border-2 p-3 rounded-xl font-bold text-pink-600">2球套餐 $100</button>
-        </div>
+        <div id="cart-items" class="space-y-3"></div>
 
-        <div id="order-area" class="hidden">
-            <div id="flavor-selectors" class="mb-4"></div>
-            <p id="top-title" class="font-bold mb-2"></p>
-            <div id="topping-list" class="space-y-2 mb-4"></div>
-            <button onclick="addToCart()" class="w-full bg-pink-500 text-white font-bold py-3 rounded-xl">加入購物車</button>
-        </div>
-
-        <div id="cart-display" class="mt-6 border-t pt-4 hidden">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="font-bold">🛒 購物車</h3>
-                <button onclick="clearCart()" class="text-red-500 text-xs">清空</button>
+        <div class="bg-white rounded-2xl shadow-lg p-5 mt-4 border-2 border-pink-200">
+            <div class="flex justify-between items-center font-black text-2xl mb-4">
+                <span>總計：</span>
+                <span class="text-pink-600" id="total-price">$0</span>
             </div>
-            <div id="cart-items" class="space-y-2"></div>
-            <div class="flex justify-between font-black text-xl mt-4"><span>總計:</span><span id="total-price">$0</span></div>
-            <button onclick="sendOrder()" class="w-full bg-pink-700 text-white py-4 rounded-xl mt-4 font-bold">送出訂單</button>
+            <button onclick="sendOrder()" class="w-full bg-black text-white py-4 rounded-xl font-black text-xl hover:bg-gray-800 transition-all">
+                正式送出訂單
+            </button>
         </div>
     </div>
 
@@ -176,47 +70,54 @@
         let curTops = {"珍珠":0,"寒天":0,"碎餅乾":0,"棉花糖":0,"脆迪酥":0};
 
         window.setPlan = (id, price, mainCnt) => {
-            const topLimit = (mainCnt === 1) ? 2 : 3;
-            curPlan = { id, price, mainCnt, topLimit };
+            const limit = (mainCnt === 1) ? 2 : 3;
+            curPlan = { id, price, mainCnt, limit };
             document.querySelectorAll('.plan-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('plan-'+id).classList.add('active');
             document.getElementById('order-area').classList.remove('hidden');
-            document.getElementById('top-title').innerText = `選擇配料 (限 ${topLimit} 份)：`;
-            const area = document.getElementById('flavor-selectors');
-            area.innerHTML = '';
-            for(let i=0; i<mainCnt; i++) area.innerHTML += `<select class="f-sel w-full border p-2 rounded mb-1"><option>椰奶</option><option>荔枝</option><option>Oreo</option></select>`;
+            document.getElementById('top-title').innerText = `配料 (限 ${limit} 份)：`;
+            const fArea = document.getElementById('flavor-selectors');
+            fArea.innerHTML = '<p class="font-bold text-gray-600 text-xs">口味：</p>';
+            for(let i=0; i<mainCnt; i++) fArea.innerHTML += `<select class="f-sel w-full border-2 p-2 rounded-lg font-bold"><option>椰奶</option><option>荔枝</option><option>Oreo</option></select>`;
             Object.keys(curTops).forEach(n => curTops[n] = 0);
             updateTopUI();
         };
 
-        window.changeTop = (name, delta) => {
+        window.changeTop = (n, d) => {
             const total = Object.values(curTops).reduce((a,b)=>a+b, 0);
-            if(delta > 0 && total >= curPlan.topLimit) return;
-            if(delta < 0 && curTops[name] <= 0) return;
-            curTops[name] += delta;
+            if(d > 0 && total >= curPlan.limit) return;
+            if(d < 0 && curTops[n] <= 0) return;
+            curTops[n] += d;
             updateTopUI();
         };
 
         function updateTopUI() {
-            const topArea = document.getElementById('topping-list');
-            topArea.innerHTML = Object.keys(curTops).map(name => `
-                <div class="flex justify-between items-center bg-gray-50 p-2 rounded">
-                    <span>${name}</span>
-                    <div class="flex gap-2 items-center"><button onclick="changeTop('${name}',-1)" class="w-6 h-6 border rounded">-</button><span>${curTops[name]}</span><button onclick="changeTop('${name}',1)" class="w-6 h-6 border rounded">+</button></div>
+            const area = document.getElementById('topping-list');
+            area.innerHTML = Object.keys(curTops).map(n => `
+                <div class="flex justify-between items-center bg-gray-50 p-2 rounded-lg border">
+                    <span class="font-bold text-gray-700">${n}</span>
+                    <div class="flex items-center gap-3">
+                        <button onclick="changeTop('${n}',-1)" class="w-7 h-7 border rounded-full bg-white">-</button>
+                        <span class="font-black text-pink-600 w-4 text-center">${curTops[n]}</span>
+                        <button onclick="changeTop('${n}',1)" class="w-7 h-7 border rounded-full bg-white">+</button>
+                    </div>
                 </div>`).join('');
         }
 
         window.addToCart = () => {
             const flavors = Array.from(document.querySelectorAll('.f-sel')).map(s=>s.value).join('+');
             const tops = Object.entries(curTops).filter(t=>t[1]>0).map(t=>`${t[0]}x${t[1]}`).join(',');
-            cart.push({ plan: curPlan.mainCnt+'球', flavors, tops, price: curPlan.price, qty: 1 });
-            document.getElementById('cart-display').classList.remove('hidden');
+            cart.push({ desc: `${curPlan.mainCnt}球(${flavors})`, tops: tops||'無配料', price: curPlan.price, qty: 1 });
+            document.getElementById('cart-container').classList.remove('hidden');
             updateCartUI();
+            // 加入後隱藏點餐區以便看清單
+            document.getElementById('order-area').classList.add('hidden');
+            document.querySelectorAll('.plan-btn').forEach(b => b.classList.remove('active'));
         };
 
         window.clearCart = () => { cart = []; updateCartUI(); };
-        window.changeCartQty = (i, delta) => {
-            cart[i].qty += delta;
+        window.changeCartQty = (i, d) => {
+            cart[i].qty += d;
             if(cart[i].qty <= 0) cart.splice(i, 1);
             updateCartUI();
         };
@@ -224,21 +125,39 @@
         function updateCartUI() {
             const list = document.getElementById('cart-items');
             list.innerHTML = cart.map((item, i) => `
-                <div class="flex justify-between items-center text-sm">
-                    <span>${item.plan} (${item.flavors})</span>
-                    <div class="flex gap-2 items-center"><button onclick="changeCartQty(${i},-1)" class="w-6 h-6 border">-</button><span>${item.qty}</span><button onclick="changeCartQty(${i},1)" class="w-6 h-6 border">+</button></div>
+                <div class="cart-card bg-white shadow-md p-4 rounded-xl flex justify-between items-center">
+                    <div>
+                        <div class="font-black text-gray-800">${item.desc}</div>
+                        <div class="text-xs text-gray-400">配料: ${item.tops}</div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="changeCartQty(${i},-1)" class="w-6 h-6 border rounded font-bold text-gray-400">-</button>
+                        <span class="font-black">${item.qty}</span>
+                        <button onclick="changeCartQty(${i},1)" class="w-6 h-6 border rounded font-bold text-gray-400">+</button>
+                    </div>
                 </div>`).join('');
-            document.getElementById('total-price').innerText = '$' + cart.reduce((s,i)=>s+(i.price*i.qty), 0);
+            const total = cart.reduce((s, i) => s + (i.price * i.qty), 0);
+            document.getElementById('total-price').innerText = `$${total}`;
+            if(cart.length === 0) document.getElementById('cart-container').classList.add('hidden');
         }
 
         window.sendOrder = async () => {
-            const res = await runTransaction(ref(db, 'currentNumber'), c => (c||100)+1);
-            const num = res.snapshot.val();
-            const items = cart.map(c => `${c.qty}份 x [${c.plan}]|${c.flavors}|${c.tops}`).join(' ## ');
-            await set(push(ref(db, 'orders')), { orderNum: num, items, price: cart.reduce((s,i)=>s+(i.price*i.qty),0), status: 'waiting', timestamp: Date.now() });
-            document.body.innerHTML = `<div class="p-10 text-center"><h1 class="text-4xl">訂單成功！號碼：</h1><div class="text-8xl font-black">${num}</div><div class="mt-4 text-left text-sm">${items.replace(/##/g, '<br>')}</div><button onclick="location.reload()" class="mt-6 bg-pink-500 text-white p-4 rounded">再點一單</button></div>`;
+            if(cart.length === 0) return;
+            const numRes = await runTransaction(ref(db, 'currentNumber'), c => (c || 100) + 1);
+            const num = numRes.snapshot.val();
+            const items = cart.map(c => `${c.qty}份 x [${c.desc}] | 配料: ${c.tops}`).join(' ## ');
+            await set(push(ref(db, 'orders')), {
+                orderNum: num, items, price: cart.reduce((s,i)=>s+(i.price*i.qty),0), status: 'waiting', timestamp: Date.now()
+            });
+            document.body.innerHTML = `
+                <div class="flex flex-col items-center justify-center min-h-screen p-6">
+                    <div class="bg-white p-10 rounded-3xl shadow-2xl border-4 border-green-500 text-center w-full max-w-sm">
+                        <h1 class="text-xl font-bold text-gray-500 mb-2">點餐成功！號碼：</h1>
+                        <div class="text-9xl font-black text-green-600 mb-6">${num}</div>
+                        <button onclick="location.reload()" class="w-full bg-green-500 text-white py-4 rounded-xl font-bold">再點一單</button>
+                    </div>
+                </div>`;
         };
     </script>
 </body>
 </html>
-
