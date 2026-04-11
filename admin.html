@@ -2,32 +2,62 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>管理後台</title>
+    <title>店長後台 - 108 冰淇淋</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .page-content { display: none; }
+        .page-content.active { display: block; }
+        .order-card { border: 2px solid #000; background: #fff; }
+        .divider { border-bottom: 1px dashed #ccc; margin: 8px 0; }
+    </style>
 </head>
-<body class="bg-gray-100 p-4">
-    <div class="max-w-5xl mx-auto">
-        <div class="flex justify-between items-center mb-6 border-b-2 border-black pb-4">
-            <h1 class="text-2xl font-bold">訂單管理系統</h1>
-            <div class="text-right font-bold text-xl">今日營收: <span id="rev" class="text-blue-600">$ 0</span></div>
-            <button onclick="resetSys()" class="bg-red-600 text-white px-4 py-2 text-sm">系統重設</button>
+<body class="bg-gray-50 text-gray-900 font-sans">
+
+    <nav class="bg-black text-white p-4 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex gap-6 font-bold">
+            <button onclick="showPage('home')" class="hover:text-blue-400">控制台</button>
+            <button onclick="showPage('history')" class="hover:text-blue-400">訂單紀錄</button>
+            <button onclick="showPage('stats')" class="hover:text-blue-400">品項統計</button>
+        </div>
+        <div class="text-xl font-black text-blue-400">今日營收: <span id="total-rev">$ 0</span></div>
+    </nav>
+
+    <main class="p-6 max-w-6xl mx-auto">
+        
+        <div id="page-home" class="page-content active">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="active-orders"></div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="active-list"></div>
-
-        <div class="mt-10">
-            <h2 class="font-bold border-l-4 border-black pl-2 mb-4">歷史清單與統計</h2>
-            <div class="bg-white border border-gray-400 p-4 mb-6">
-                <div class="grid grid-cols-2 gap-4 text-sm" id="stock-info"></div>
+        <div id="page-history" class="page-content">
+            <div class="bg-white border border-black overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-gray-100 border-b border-black text-sm uppercase">
+                        <tr>
+                            <th class="p-4 border-r border-black">單號</th>
+                            <th class="p-4 border-r border-black">訂單細節 (分行顯示)</th>
+                            <th class="p-4 text-right">金額</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-body" class="divide-y divide-gray-200"></tbody>
+                </table>
             </div>
-            <table class="w-full bg-white border border-gray-400 text-sm">
-                <thead class="bg-gray-200">
-                    <tr><th class="border border-gray-400 p-2">單號</th><th class="border border-gray-400 p-2 text-left">內容細節</th><th class="border border-gray-400 p-2">金額</th></tr>
-                </thead>
-                <tbody id="history-body"></tbody>
-            </table>
         </div>
-    </div>
+
+        <div id="page-stats" class="page-content">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div class="bg-white border-2 border-black p-6">
+                    <h3 class="text-lg font-black border-b-2 border-black mb-4 pb-2">口味銷售統計 (球)</h3>
+                    <div id="stat-flavors" class="space-y-3"></div>
+                </div>
+                <div class="bg-white border-2 border-black p-6">
+                    <h3 class="text-lg font-black border-b-2 border-black mb-4 pb-2">配料銷售統計 (份)</h3>
+                    <div id="stat-toppings" class="space-y-3"></div>
+                </div>
+            </div>
+            <button onclick="resetData()" class="mt-20 w-full border-2 border-red-600 text-red-600 font-bold py-4 hover:bg-red-50">重設系統資料 (清空所有訂單)</button>
+        </div>
+
+    </main>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
@@ -41,52 +71,94 @@
         };
         const db = getDatabase(initializeApp(firebaseConfig));
 
+        window.showPage = (p) => {
+            document.querySelectorAll('.page-content').forEach(el => el.classList.remove('active'));
+            document.getElementById('page-'+p).classList.add('active');
+        };
+
         onValue(ref(db, 'orders'), (snap) => {
             const data = snap.val();
-            const active = document.getElementById('active-list');
-            const history = document.getElementById('history-body');
-            let rev = 0; active.innerHTML = ''; history.innerHTML = '';
+            const activeDiv = document.getElementById('active-orders');
+            const historyBody = document.getElementById('history-body');
+            const fStatDiv = document.getElementById('stat-flavors');
+            const tStatDiv = document.getElementById('stat-toppings');
             
-            const stats = {};
+            let totalRev = 0;
+            const fStats = {}; const tStats = {};
+            activeDiv.innerHTML = ''; historyBody.innerHTML = '';
 
             for (let id in data) {
                 const o = data[id];
-                rev += o.price;
-                
-                // 統計
-                o.items.split(/[;|,|+]/).forEach(s => {
-                    let k = s.trim(); if(!k) return;
-                    stats[k] = (stats[k] || 0) + 1;
+                totalRev += o.price;
+
+                // 解析內容顯示
+                // items 格式: "[2球套餐]|口味:椰奶+Oreo|配料:珍珠x2 || [3球套餐]..."
+                const subOrders = o.items.split(' || ');
+                let displayHTML = subOrders.map(so => {
+                    const parts = so.split('|');
+                    return `
+                        <div class="mb-2">
+                            <div class="font-bold text-blue-600">${parts[0]}</div>
+                            <div class="ml-2 text-gray-700">${parts[1]}</div>
+                            <div class="ml-2 text-gray-500 text-xs">${parts[2]}</div>
+                        </div>
+                    `;
+                }).join('<div class="divider"></div>');
+
+                // 統計計算 (排除裝飾文字)
+                subOrders.forEach(so => {
+                    const parts = so.split('|');
+                    // 口味統計
+                    if(parts[1]) {
+                        const flavors = parts[1].replace('口味:','').split('+');
+                        flavors.forEach(f => { fStats[f] = (fStats[f] || 0) + 1; });
+                    }
+                    // 配料統計
+                    if(parts[2]) {
+                        const tops = parts[2].replace('配料:','').split(',');
+                        tops.forEach(t => {
+                            const [name, qty] = t.split('x');
+                            tStats[name] = (tStats[name] || 0) + parseInt(qty);
+                        });
+                    }
                 });
 
+                // 渲染控制台卡片
                 if (o.status !== 'done') {
                     const card = document.createElement('div');
-                    card.className = `border-2 border-black p-4 bg-white ${o.status==='ready'?'bg-yellow-50':''}`;
+                    card.className = `order-card p-5 ${o.status==='ready'?'bg-blue-50 border-blue-600':''}`;
                     card.innerHTML = `
-                        <div class="flex justify-between font-bold border-b border-gray-300 pb-2 mb-2">
-                            <span class="text-2xl">#${o.orderNum}</span>
-                            <span class="text-lg">$${o.price}</span>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-3xl font-black">#${o.orderNum}</span>
+                            <span class="font-bold border px-2 py-1">$${o.price}</span>
                         </div>
-                        <div class="text-sm font-medium mb-4 space-y-1">
-                            ${o.items.split(';').map(i=>`<div>• ${i.trim()}</div>`).join('')}
-                        </div>
+                        <div class="mb-6">${displayHTML}</div>
                         <div class="flex gap-2">
                             ${o.status==='waiting'?
-                                `<button onclick="u('${id}','ready')" class="w-full bg-black text-white py-2 font-bold">叫號</button>`:
-                                `<button onclick="u('${id}','done')" class="w-full bg-green-700 text-white py-2 font-bold">結案</button>`
+                                `<button onclick="u('${id}','ready')" class="w-full bg-black text-white py-3 font-bold">叫號 (Ready)</button>`:
+                                `<button onclick="u('${id}','done')" class="w-full bg-green-700 text-white py-3 font-bold">結案 (Finish)</button>`
                             }
                         </div>`;
-                    active.appendChild(card);
+                    activeDiv.appendChild(card);
                 }
-                const row = history.insertRow(0);
-                row.innerHTML = `<td class="border border-gray-400 p-2 text-center font-bold">#${o.orderNum}</td><td class="border border-gray-400 p-2">${o.items}</td><td class="border border-gray-400 p-2 text-center font-bold">$${o.price}</td>`;
+
+                // 渲染紀錄表格
+                const row = historyBody.insertRow(0);
+                row.innerHTML = `
+                    <td class="p-4 border-r font-black text-xl">#${o.orderNum}</td>
+                    <td class="p-4 border-r text-sm">${displayHTML}</td>
+                    <td class="p-4 text-right font-bold text-blue-600">$${o.price}</td>
+                `;
             }
-            document.getElementById('rev').innerText = `$ ${rev}`;
-            document.getElementById('stock-info').innerHTML = Object.entries(stats).map(e=>`<div>${e[0]}: <b>${e[1]}</b></div>`).join('');
+
+            // 更新 UI
+            document.getElementById('total-rev').innerText = `$ ${totalRev}`;
+            fStatDiv.innerHTML = Object.entries(fStats).map(([k,v]) => `<div class="flex justify-between border-b pb-1"><span>${k}</span><span class="font-bold text-blue-600">${v} 球</span></div>`).join('');
+            tStatDiv.innerHTML = Object.entries(tStats).map(([k,v]) => `<div class="flex justify-between border-b pb-1"><span>${k}</span><span class="font-bold text-green-600">${v} 份</span></div>`).join('');
         });
 
         window.u = (id, s) => update(ref(db, 'orders/'+id), {status:s});
-        window.resetSys = () => confirm("確定清空所有資料？") && set(ref(db,'/'), {currentNumber:100, orders:null});
+        window.resetData = () => confirm("確定清空？") && set(ref(db, '/'), {currentNumber:100, orders:null}).then(()=>location.reload());
     </script>
 </body>
 </html>
