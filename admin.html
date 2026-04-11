@@ -5,34 +5,44 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>店長後台 - Look In My Ice</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: sans-serif; background-color: #f9fafb; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .nav-btn.active { color: #f472b6; border-bottom: 2px solid #f472b6; }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <nav class="bg-black text-white p-4 flex justify-between items-center sticky top-0 z-50">
+<body>
+    <nav class="bg-black text-white p-4 flex justify-between items-center sticky top-0 z-50 shadow-lg">
         <div class="flex gap-6 font-bold">
-            <button onclick="showTab('active')" class="hover:text-pink-400">控制台</button>
-            <button onclick="showTab('history')" class="hover:text-pink-400">訂單紀錄</button>
-            <button onclick="showTab('stats')" class="hover:text-pink-400">品項統計</button>
+            <button onclick="switchTab('active')" id="btn-active" class="nav-btn active pb-1 transition-all">控制台</button>
+            <button onclick="switchTab('history')" id="btn-history" class="nav-btn pb-1 transition-all">訂單紀錄</button>
+            <button onclick="switchTab('stats')" id="btn-stats" class="nav-btn pb-1 transition-all">品項統計</button>
         </div>
-        <div class="text-yellow-400 font-black">今日營收：$<span id="total-revenue">0</span></div>
+        <div class="text-yellow-400 font-black text-lg">今日已收營收：$<span id="total-revenue">0</span></div>
     </nav>
 
     <div class="p-4 max-w-4xl mx-auto">
-        <div id="tab-active" class="tab-content">
-            <h2 class="text-xl font-bold mb-4 border-l-4 border-pink-500 pl-2">待處理訂單</h2>
-            <div id="active-orders" class="grid gap-4"></div>
+        <div id="tab-active" class="tab-content active">
+            <h2 class="text-xl font-bold mb-4 border-l-4 border-pink-500 pl-2 text-gray-700">進行中訂單</h2>
+            <div id="active-orders" class="grid gap-4">
+                <p class="text-gray-400 italic">載入中...</p>
+            </div>
         </div>
 
-        <div id="tab-history" class="tab-content hidden">
-            <h2 class="text-xl font-bold mb-4 border-l-4 border-gray-500 pl-2">已完成訂單 (最近 50 筆)</h2>
-            <div id="history-orders" class="grid gap-4"></div>
+        <div id="tab-history" class="tab-content">
+            <h2 class="text-xl font-bold mb-4 border-l-4 border-gray-500 pl-2 text-gray-700">最近完成紀錄 (50筆)</h2>
+            <div id="history-orders" class="grid gap-3"></div>
         </div>
 
-        <div id="tab-stats" class="tab-content hidden">
-            <h2 class="text-xl font-bold mb-4 border-l-4 border-blue-500 pl-2">銷售總計</h2>
-            <div class="bg-white p-6 rounded-xl shadow-md">
-                <div id="stats-list" class="space-y-2"></div>
-                <button onclick="resetAllData()" class="w-full mt-10 bg-red-600 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2">
-                    ⚠️ 清空所有資料與號碼
+        <div id="tab-stats" class="tab-content">
+            <h2 class="text-xl font-bold mb-4 border-l-4 border-blue-500 pl-2 text-gray-700">銷售數據 (僅計完成訂單)</h2>
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-gray-100">
+                <div id="stats-list" class="space-y-6"></div>
+                
+                <hr class="my-8">
+                <button onclick="resetAllData()" class="w-full bg-red-100 text-red-600 py-4 rounded-xl font-bold hover:bg-red-600 hover:text-white transition-all flex items-center justify-center gap-2">
+                    <span>⚠️</span> 清空所有資料與重設號碼
                 </button>
             </div>
         </div>
@@ -53,13 +63,15 @@
         };
         const db = getDatabase(!getApps().length ? initializeApp(firebaseConfig) : getApps()[0]);
 
-        // 切換分頁
-        window.showTab = (tabName) => {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById('tab-' + tabName).classList.remove('hidden');
+        // 分頁切換
+        window.switchTab = (name) => {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + name).classList.add('active');
+            document.getElementById('btn-' + name).classList.add('active');
         };
 
-        // 監聽資料庫
+        // 監聽 Firebase 資料
         onValue(ref(db, 'orders'), (snapshot) => {
             const data = snapshot.val();
             if (!data) {
@@ -67,92 +79,142 @@
                 return;
             }
 
-            const orders = Object.entries(data).map(([id, val]) => ({ id, ...val }));
-            orders.sort((a, b) => b.timestamp - a.timestamp);
+            const allOrders = Object.entries(data).map(([id, val]) => ({ id, ...val }));
+            allOrders.sort((a, b) => b.timestamp - a.timestamp);
 
-            renderActive(orders.filter(o => o.status === 'waiting'));
-            renderHistory(orders.filter(o => o.status === 'done').slice(0, 50));
-            renderStats(orders);
+            renderActive(allOrders.filter(o => o.status === 'waiting' || o.status === 'ready'));
+            renderHistory(allOrders.filter(o => o.status === 'done').slice(0, 50));
+            renderStats(allOrders);
         });
 
-        // 渲染待處理訂單
+        // 1. 渲染控制台
         function renderActive(list) {
             const container = document.getElementById('active-orders');
-            container.innerHTML = list.length ? '' : '<p class="text-gray-400">尚無待處理訂單</p>';
+            container.innerHTML = list.length ? '' : '<p class="text-gray-400 py-10 text-center">目前沒有製作中的訂單 🍵</p>';
+            
             list.forEach(o => {
+                const isReady = o.status === 'ready';
                 const card = document.createElement('div');
-                card.className = "bg-white p-4 rounded-xl shadow-md border-l-8 border-pink-500 flex justify-between items-center";
+                card.className = `p-5 rounded-2xl shadow-sm border-l-8 flex justify-between items-center transition-all ${isReady ? 'bg-green-50 border-green-500' : 'bg-white border-pink-500'}`;
+                
                 card.innerHTML = `
-                    <div>
-                        <div class="text-2xl font-black">#${o.orderNum} <span class="text-sm text-gray-400">$${o.price}</span></div>
-                        <div class="text-sm text-blue-600 mt-1">${o.items.replace(/ ## /g, '<br>')}</div>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3">
+                            <span class="text-3xl font-black text-gray-800">#${o.orderNum}</span>
+                            <span class="px-2 py-1 text-xs font-bold rounded ${isReady ? 'bg-green-200 text-green-700' : 'bg-pink-100 text-pink-600'}">
+                                ${isReady ? '🔔 請取餐中' : '👩‍🍳 製作中'}
+                            </span>
+                        </div>
+                        <div class="text-sm text-blue-700 font-medium mt-2 leading-relaxed">
+                            ${o.items.replace(/ ## /g, '<br>')}
+                        </div>
                     </div>
-                    <button onclick="markDone('${o.id}')" class="bg-black text-white px-6 py-3 rounded-lg font-bold">叫號 (Ready)</button>
+                    <div class="ml-4">
+                        ${isReady 
+                            ? `<button onclick="updateStatus('${o.id}', 'done')" class="bg-green-600 text-white px-6 py-4 rounded-xl font-bold shadow-md hover:bg-green-700 active:scale-95 transition-all text-lg">完成訂單</button>`
+                            : `<button onclick="updateStatus('${o.id}', 'ready')" class="bg-black text-white px-6 py-4 rounded-xl font-bold shadow-md hover:bg-gray-800 active:scale-95 transition-all text-lg">叫號 Ready</button>`
+                        }
+                    </div>
                 `;
                 container.appendChild(card);
             });
         }
 
-        // 渲染歷史訂單
+        // 2. 渲染歷史紀錄
         function renderHistory(list) {
             const container = document.getElementById('history-orders');
-            container.innerHTML = list.length ? '' : '<p class="text-gray-400">尚無完成紀錄</p>';
+            container.innerHTML = list.length ? '' : '<p class="text-gray-400 text-center py-4">無完成紀錄</p>';
             list.forEach(o => {
                 const card = document.createElement('div');
-                card.className = "bg-gray-50 p-3 rounded-lg border border-gray-200 flex justify-between opacity-70";
+                card.className = "bg-white p-3 rounded-xl border border-gray-200 flex justify-between items-center opacity-60 grayscale";
                 card.innerHTML = `
-                    <div class="text-sm">
-                        <span class="font-bold">#${o.orderNum}</span> - ${o.items.split(' ## ')[0]}...
-                    </div>
-                    <span class="text-green-600 font-bold">已完成</span>
+                    <div class="text-sm font-bold">#${o.orderNum} <span class="text-gray-400 font-normal">($${o.price})</span></div>
+                    <div class="text-xs text-gray-500 truncate max-w-[200px]">${o.items.split(' ## ')[0]}...</div>
+                    <span class="text-green-600 text-xs font-bold">已領取</span>
                 `;
                 container.appendChild(card);
             });
         }
 
-        // 渲染統計與修正空行
+        // 3. 渲染統計 (修正排列組合與空行，僅計 done)
         function renderStats(allOrders) {
-            const stats = {};
+            const flavors = {};
+            const toppings = {};
             let totalRev = 0;
             
-            allOrders.forEach(o => {
+            // 重要：只過濾已完成的訂單
+            const doneOrders = allOrders.filter(o => o.status === 'done');
+
+            doneOrders.forEach(o => {
                 totalRev += (o.price || 0);
-                // 解析項目
-                const parts = o.items.split(' ## ');
-                parts.forEach(p => {
-                    if(!p.trim()) return; // 修正：跳過空字串防止出現空行
-                    const name = p.split('|')[0] || "未知品項";
-                    stats[name] = (stats[name] || 0) + 1;
+                if (!o.items) return;
+
+                const entries = o.items.split(' ## ');
+                entries.forEach(entry => {
+                    if (!entry.trim()) return; // 修正空行
+
+                    // 提取份數
+                    const qtyMatch = entry.match(/(\d+)份/);
+                    const qty = qtyMatch ? parseInt(qtyMatch[1]) : 1;
+
+                    // 統計口味 (括號內內容)
+                    const flavorMatch = entry.match(/\((.*?)\)/);
+                    if (flavorMatch) {
+                        flavorMatch[1].split('+').forEach(f => {
+                            flavors[f] = (flavors[f] || 0) + qty;
+                        });
+                    }
+
+                    // 統計配料
+                    const topPart = entry.split('| 配料: ')[1];
+                    if (topPart && topPart !== '無配料') {
+                        topPart.split(',').forEach(t => {
+                            const [tName, tQtyStr] = t.split('x');
+                            const tQty = tQtyStr ? parseInt(tQtyStr) : 1;
+                            toppings[tName] = (toppings[tName] || 0) + (qty * tQty);
+                        });
+                    }
                 });
             });
 
             document.getElementById('total-revenue').innerText = totalRev;
             const statsList = document.getElementById('stats-list');
-            statsList.innerHTML = Object.entries(stats).map(([name, count]) => `
-                <div class="flex justify-between border-b py-2">
-                    <span class="font-medium">${name}</span>
-                    <span class="font-black">${count}</span>
+            
+            let html = `
+                <div>
+                    <h3 class="font-black text-pink-600 border-b-2 border-pink-100 mb-3 flex items-center gap-2">🍦 口味總銷量 (球)</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        ${Object.entries(flavors).map(([n, c]) => `<div class="bg-pink-50 p-3 rounded-lg flex justify-between"><span>${n}</span><span class="font-black">${c}</span></div>`).join('')}
+                    </div>
                 </div>
-            `).join('');
+                <div>
+                    <h3 class="font-black text-blue-600 border-b-2 border-blue-100 mb-3 flex items-center gap-2">🍬 配料總量 (份)</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        ${Object.entries(toppings).map(([n, c]) => `<div class="bg-blue-50 p-3 rounded-lg flex justify-between"><span>${n}</span><span class="font-black">${c}</span></div>`).join('')}
+                    </div>
+                </div>`;
+            
+            statsList.innerHTML = doneOrders.length ? html : '<p class="text-center text-gray-400 py-10">尚無完成訂單的銷售數據</p>';
         }
 
         function renderEmpty() {
-            document.getElementById('active-orders').innerHTML = "尚無訂單";
-            document.getElementById('stats-list').innerHTML = "";
+            document.getElementById('active-orders').innerHTML = "目前無訂單";
             document.getElementById('total-revenue').innerText = "0";
+            document.getElementById('stats-list').innerHTML = "";
         }
 
-        window.markDone = (id) => {
-            update(ref(db, `orders/${id}`), { status: 'done' });
+        window.updateStatus = (id, newStatus) => {
+            update(ref(db, `orders/${id}`), { status: newStatus });
         };
 
         window.resetAllData = () => {
-            if (confirm("確定要清空所有資料嗎？這將會重設訂單號碼並刪除所有紀錄！")) {
+            if (confirm("🚨 注意！這將清空所有訂單並重設號碼至 101，確定嗎？")) {
                 remove(ref(db, 'orders'));
                 set(ref(db, 'currentNumber'), 100);
-                alert("已重設完成");
+                location.reload();
             }
         };
     </script>
 </body>
 </html>
+            
