@@ -2,90 +2,32 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>冰淇淋店長後台</title>
+    <title>管理後台</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { background-color: #020617; color: #f1f5f9; }
-        .stat-card { background: #0f172a; border: 1px solid #1e293b; }
-        .sidebar { transition: transform 0.3s ease-in-out; }
-        .page-content { animation: fadeIn 0.3s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    </style>
 </head>
-<body class="p-4 md:p-8">
-
-    <header class="max-w-6xl mx-auto flex justify-between items-center mb-8 bg-slate-900/50 p-6 rounded-[2.5rem] border border-slate-800 shadow-2xl">
-        <div class="flex items-center gap-6">
-            <div class="h-12 w-1.5 bg-pink-600 rounded-full"></div>
-            <div>
-                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">總營業額</p>
-                <h2 id="totalRevenueTop" class="text-4xl font-black text-pink-500 leading-none">$ 0</h2>
-            </div>
+<body class="bg-gray-100 p-4">
+    <div class="max-w-5xl mx-auto">
+        <div class="flex justify-between items-center mb-6 border-b-2 border-black pb-4">
+            <h1 class="text-2xl font-bold">訂單管理系統</h1>
+            <div class="text-right font-bold text-xl">今日營收: <span id="rev" class="text-blue-600">$ 0</span></div>
+            <button onclick="resetSys()" class="bg-red-600 text-white px-4 py-2 text-sm">系統重設</button>
         </div>
-        <button onclick="toggleSidebar()" class="bg-slate-800 p-4 rounded-2xl hover:bg-slate-700 active:scale-90 transition-all border border-slate-700 shadow-lg">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
-            </svg>
-        </button>
-    </header>
 
-    <div id="sidebar" class="sidebar fixed top-0 right-0 h-full w-72 bg-slate-900 z-50 translate-x-full shadow-2xl p-8 border-l border-slate-800">
-        <div class="flex justify-between items-center mb-10">
-            <span class="text-pink-500 font-black text-xl tracking-tighter uppercase">選單</span>
-            <button onclick="toggleSidebar()" class="text-slate-500">✕</button>
-        </div>
-        <nav class="space-y-4">
-            <button onclick="showPage('home')" class="w-full text-left py-4 px-6 rounded-2xl font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition-all">🏠 控制台 (製作中)</button>
-            <button onclick="showPage('history')" class="w-full text-left py-4 px-6 rounded-2xl font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition-all">📋 訂單紀錄 (含金額)</button>
-            <button onclick="showPage('stock')" class="w-full text-left py-4 px-6 rounded-2xl font-bold text-slate-300 hover:bg-slate-800 hover:text-white transition-all">📊 庫存消耗統計</button>
-            <div class="pt-10 mt-10 border-t border-slate-800">
-                <button onclick="resetSystem()" class="w-full text-left py-4 px-6 rounded-2xl font-bold text-red-500 hover:bg-red-500/10 transition-all uppercase text-sm tracking-widest">⚠️ 重設系統資料</button>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="active-list"></div>
+
+        <div class="mt-10">
+            <h2 class="font-bold border-l-4 border-black pl-2 mb-4">歷史清單與統計</h2>
+            <div class="bg-white border border-gray-400 p-4 mb-6">
+                <div class="grid grid-cols-2 gap-4 text-sm" id="stock-info"></div>
             </div>
-        </nav>
+            <table class="w-full bg-white border border-gray-400 text-sm">
+                <thead class="bg-gray-200">
+                    <tr><th class="border border-gray-400 p-2">單號</th><th class="border border-gray-400 p-2 text-left">內容細節</th><th class="border border-gray-400 p-2">金額</th></tr>
+                </thead>
+                <tbody id="history-body"></tbody>
+            </table>
+        </div>
     </div>
-
-    <main class="max-w-6xl mx-auto">
-        
-        <div id="page-home" class="page-content">
-            <div id="active-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-        </div>
-
-        <div id="page-history" class="page-content hidden">
-            <div class="bg-slate-900 rounded-[2.5rem] overflow-hidden border border-slate-800 shadow-xl">
-                <table class="w-full text-left border-collapse">
-                    <thead class="bg-slate-800/50 text-slate-500 text-[10px] font-black uppercase tracking-widest">
-                        <tr>
-                            <th class="px-8 py-5">單號</th>
-                            <th class="px-8 py-5">訂購內容</th>
-                            <th class="px-8 py-5 text-right">小計</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history-table-body" class="divide-y divide-slate-800 text-sm">
-                        </tbody>
-                    <tfoot class="bg-pink-900/10 border-t-2 border-pink-900/30">
-                        <tr>
-                            <td colspan="2" class="px-8 py-6 font-bold text-slate-400 text-right">當前總計金額：</td>
-                            <td id="historyTotalAmount" class="px-8 py-6 font-black text-pink-500 text-right text-xl">$ 0</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-        </div>
-
-        <div id="page-stock" class="page-content hidden text-center md:text-left">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="stat-card p-10 rounded-[2.5rem] shadow-xl">
-                    <h3 class="text-pink-500 font-black mb-6 border-b border-slate-800 pb-4 uppercase tracking-widest text-sm">主餐 (球數)</h3>
-                    <div id="stock-main" class="space-y-5 text-lg"></div>
-                </div>
-                <div class="stat-card p-10 rounded-[2.5rem] shadow-xl">
-                    <h3 class="text-indigo-400 font-black mb-6 border-b border-slate-800 pb-4 uppercase tracking-widest text-sm">配料 (份數)</h3>
-                    <div id="stock-topping" class="space-y-5 text-lg"></div>
-                </div>
-            </div>
-        </div>
-
-    </main>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
@@ -95,87 +37,56 @@
             apiKey: "AIzaSyBw2axh4vgkOnNEsUgYbkmmV71TJN5Yzqc",
             authDomain: "school-festival-pos-f2c1e.firebaseapp.com",
             databaseURL: "https://school-festival-pos-f2c1e-default-rtdb.firebaseio.com",
-            projectId: "school-festival-pos-f2c1e",
-            storageBucket: "school-festival-pos-f2c1e.firebasestorage.app",
-            messagingSenderId: "135308112776",
-            appId: "1:135308112776:web:6935bd537916dbbda9c03d"
+            projectId: "school-festival-pos-f2c1e"
         };
         const db = getDatabase(initializeApp(firebaseConfig));
 
-        window.toggleSidebar = () => document.getElementById('sidebar').classList.toggle('translate-x-full');
-        window.showPage = (p) => {
-            document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById('page-' + p).classList.remove('hidden');
-            toggleSidebar();
-        };
-
-        window.resetSystem = () => {
-            if (confirm("⚠️ 注意！這將重設所有號碼並刪除所有訂單資料。確定執行嗎？")) {
-                set(ref(db, '/'), { currentNumber: 100, orders: null }).then(() => location.reload());
-            }
-        };
-
-        onValue(ref(db, 'orders'), (snapshot) => {
-            const data = snapshot.val();
-            let totalSum = 0;
-            const activeList = document.getElementById('active-list');
-            const historyBody = document.getElementById('history-table-body');
+        onValue(ref(db, 'orders'), (snap) => {
+            const data = snap.val();
+            const active = document.getElementById('active-list');
+            const history = document.getElementById('history-body');
+            let rev = 0; active.innerHTML = ''; history.innerHTML = '';
             
-            const stockMain = { "椰奶": 0, "荔枝": 0, "Oreo": 0 };
-            const stockTop = { "珍珠": 0, "寒天": 0, "碎餅乾": 0, "棉花糖": 0, "脆迪酥": 0 };
-
-            activeList.innerHTML = ''; 
-            historyBody.innerHTML = '';
+            const stats = {};
 
             for (let id in data) {
-                const order = data[id];
-                const price = order.price || 0;
-                totalSum += price;
+                const o = data[id];
+                rev += o.price;
                 
-                const itemStr = order.items || "";
-                for(let k in stockMain) { stockMain[k] += (itemStr.match(new RegExp(k, "g")) || []).length; }
-                for(let k in stockTop) { stockTop[k] += (itemStr.match(new RegExp(k, "g")) || []).length; }
+                // 統計
+                o.items.split(/[;|,|+]/).forEach(s => {
+                    let k = s.trim(); if(!k) return;
+                    stats[k] = (stats[k] || 0) + 1;
+                });
 
-                // 渲染控制台 (製作中與叫號中)
-                if (order.status !== 'done') {
+                if (o.status !== 'done') {
                     const card = document.createElement('div');
-                    card.className = `stat-card p-8 rounded-[2.5rem] border-l-8 transition-all ${order.status === 'ready' ? 'border-green-500' : 'border-pink-500'}`;
+                    card.className = `border-2 border-black p-4 bg-white ${o.status==='ready'?'bg-yellow-50':''}`;
                     card.innerHTML = `
-                        <div class="flex justify-between items-center mb-4">
-                            <span class="text-5xl font-black text-white">#${order.orderNum}</span>
-                            <span class="text-pink-500 font-bold">$${price}</span>
+                        <div class="flex justify-between font-bold border-b border-gray-300 pb-2 mb-2">
+                            <span class="text-2xl">#${o.orderNum}</span>
+                            <span class="text-lg">$${o.price}</span>
                         </div>
-                        <div class="bg-black/30 p-4 rounded-2xl mb-6 text-sm text-slate-400 font-medium">${order.items}</div>
-                        <div class="flex gap-3">
-                            ${order.status === 'waiting' ? 
-                                `<button onclick="u('${id}', 'ready')" class="flex-1 bg-pink-600 py-4 rounded-2xl font-black text-sm active:scale-95 transition-all">叫號 (Ready)</button>` :
-                                `<button onclick="u('${id}', 'done')" class="flex-1 bg-green-600 py-4 rounded-2xl font-black text-sm active:scale-95 transition-all">完成 (Finish)</button>`
+                        <div class="text-sm font-medium mb-4 space-y-1">
+                            ${o.items.split(';').map(i=>`<div>• ${i.trim()}</div>`).join('')}
+                        </div>
+                        <div class="flex gap-2">
+                            ${o.status==='waiting'?
+                                `<button onclick="u('${id}','ready')" class="w-full bg-black text-white py-2 font-bold">叫號</button>`:
+                                `<button onclick="u('${id}','done')" class="w-full bg-green-700 text-white py-2 font-bold">結案</button>`
                             }
                         </div>`;
-                    activeList.appendChild(card);
+                    active.appendChild(card);
                 }
-
-                // 渲染訂單紀錄表格
-                const row = document.createElement('tr');
-                row.className = "hover:bg-white/5 transition-colors border-b border-slate-800/50";
-                row.innerHTML = `
-                    <td class="px-8 py-5 font-black text-white">#${order.orderNum}</td>
-                    <td class="px-8 py-5 text-slate-400 font-medium text-xs leading-relaxed">${order.items}</td>
-                    <td class="px-8 py-5 text-pink-500 font-bold text-right">$${price}</td>
-                `;
-                historyBody.prepend(row); // 最新的放在最上面
+                const row = history.insertRow(0);
+                row.innerHTML = `<td class="border border-gray-400 p-2 text-center font-bold">#${o.orderNum}</td><td class="border border-gray-400 p-2">${o.items}</td><td class="border border-gray-400 p-2 text-center font-bold">$${o.price}</td>`;
             }
-
-            // 更新總營收顯示
-            document.getElementById('totalRevenueTop').innerText = `$ ${totalSum}`;
-            document.getElementById('historyTotalAmount').innerText = `$ ${totalSum}`;
-            
-            // 更新庫存 UI
-            document.getElementById('stock-main').innerHTML = Object.entries(stockMain).map(([k, v]) => `<div class="flex justify-between border-b border-slate-800/50 pb-3"><span>${k}</span><span class="text-white font-black">${v} <small class="text-slate-600">球</small></span></div>`).join('');
-            document.getElementById('stock-topping').innerHTML = Object.entries(stockTop).map(([k, v]) => `<div class="flex justify-between border-b border-slate-800/50 pb-3"><span>${k}</span><span class="text-white font-black">${v} <small class="text-slate-600">份</small></span></div>`).join('');
+            document.getElementById('rev').innerText = `$ ${rev}`;
+            document.getElementById('stock-info').innerHTML = Object.entries(stats).map(e=>`<div>${e[0]}: <b>${e[1]}</b></div>`).join('');
         });
 
-        window.u = (id, s) => update(ref(db, 'orders/' + id), { status: s });
+        window.u = (id, s) => update(ref(db, 'orders/'+id), {status:s});
+        window.resetSys = () => confirm("確定清空所有資料？") && set(ref(db,'/'), {currentNumber:100, orders:null});
     </script>
 </body>
 </html>
