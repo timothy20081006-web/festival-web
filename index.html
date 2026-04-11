@@ -141,23 +141,41 @@
             if(cart.length === 0) document.getElementById('cart-container').classList.add('hidden');
         }
 
-        window.sendOrder = async () => {
+                window.sendOrder = async () => {
             if(cart.length === 0) return;
+            
+            // 進行 Firebase 交易以取得最新的流水號
             const numRes = await runTransaction(ref(db, 'currentNumber'), c => (c || 100) + 1);
             const num = numRes.snapshot.val();
-            const items = cart.map(c => `${c.qty}份 x [${c.desc}] | 配料: ${c.tops}`).join(' ## ');
+            
+            // 整理要顯示的明細內容
+            const itemsStr = cart.map(c => `${c.qty}份 x [${c.desc}] | 配料: ${c.tops}`).join(' ## ');
+            
+            // 存入訂單
             await set(push(ref(db, 'orders')), {
-                orderNum: num, items, price: cart.reduce((s,i)=>s+(i.price*i.qty),0), status: 'waiting', timestamp: Date.now()
+                orderNum: num,
+                items: itemsStr,
+                price: cart.reduce((s,i)=>s+(i.price*i.qty),0),
+                status: 'waiting',
+                timestamp: Date.now()
             });
+
+            // 成功畫面：補回「明細」顯示
             document.body.innerHTML = `
-                <div class="flex flex-col items-center justify-center min-h-screen p-6">
-                    <div class="bg-white p-10 rounded-3xl shadow-2xl border-4 border-green-500 text-center w-full max-w-sm">
-                        <h1 class="text-xl font-bold text-gray-500 mb-2">點餐成功！號碼：</h1>
-                        <div class="text-9xl font-black text-green-600 mb-6">${num}</div>
-                        <button onclick="location.reload()" class="w-full bg-green-500 text-white py-4 rounded-xl font-bold">再點一單</button>
+                <div class="flex flex-col items-center justify-center min-h-screen p-6 bg-pink-50">
+                    <div class="bg-white p-8 rounded-3xl shadow-2xl border-4 border-green-500 text-center w-full max-w-sm">
+                        <h1 class="text-xl font-black text-gray-600 mb-2">點餐成功！號碼：</h1>
+                        <div class="text-8xl font-black text-green-600 mb-6">${num}</div>
+                        
+                        <div class="text-left bg-gray-100 p-4 rounded-xl text-xs text-gray-700 mb-6 border border-dashed border-gray-300">
+                            <p class="font-bold mb-2 border-b border-gray-300 pb-1">您的點餐明細：</p>
+                            ${itemsStr.split(' ## ').map(item => `<div class="mb-1">• ${item}</div>`).join('')}
+                        </div>
+                        
+                        <button onclick="location.reload()" class="w-full bg-green-500 text-white py-4 rounded-xl font-bold shadow-lg">再點一單</button>
                     </div>
                 </div>`;
-        };
+            };
     </script>
 </body>
 </html>
