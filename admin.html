@@ -10,23 +10,24 @@
         .order-card { border: 3px solid #000; background: #fff; }
         .item-row { border-bottom: 2px solid #f0f0f0; padding: 10px 0; }
         .item-row:last-child { border-bottom: none; }
+        #conn-status { height: 4px; width: 100%; position: fixed; top: 0; left: 0; z-index: 100; }
     </style>
 </head>
 <body class="bg-gray-100">
+    <div id="conn-status" class="bg-red-600"></div>
 
     <nav class="bg-black text-white p-4 flex justify-between items-center sticky top-0 z-50">
-        <div class="flex gap-6 font-bold">
+        <div class="flex gap-6 font-bold text-sm">
             <button onclick="showPage('home')">控制台</button>
             <button onclick="showPage('stats')">統計/重設</button>
         </div>
-        <div class="text-xl font-black text-yellow-400">總營收: <span id="total-rev">$ 0</span></div>
+        <div class="text-lg font-black text-yellow-400 text-right">總收: <span id="total-rev">$ 0</span></div>
     </nav>
 
     <main class="p-4 max-w-6xl mx-auto">
         <div id="page-home" class="page-content active">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="active-orders"></div>
         </div>
-
         <div id="page-stats" class="page-content">
             <div id="stat-list" class="bg-white border-2 border-black p-6 space-y-2 mb-10"></div>
             <button onclick="resetData()" class="w-full bg-red-600 text-white font-bold py-6">⚠️ 清空所有資料與號碼</button>
@@ -37,8 +38,29 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
         import { getDatabase, ref, onValue, update, set } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
-        const firebaseConfig = { /* ...同前... */ };
-        const db = getDatabase(initializeApp(firebaseConfig));
+        const firebaseConfig = {
+            apiKey: "AIzaSyBw2axh4vgkOnNEsUgYbkmmV71TJN5Yzqc",
+            authDomain: "school-festival-pos-f2c1e.firebaseapp.com",
+            databaseURL: "https://school-festival-pos-f2c1e-default-rtdb.firebaseio.com",
+            projectId: "school-festival-pos-f2c1e",
+            storageBucket: "school-festival-pos-f2c1e.firebasestorage.app",
+            messagingSenderId: "135308112776",
+            appId: "1:135308112776:web:6935bd537916dbbda9c03d"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // 連線監測
+        onValue(ref(db, ".info/connected"), (snap) => {
+            const statusEl = document.getElementById('conn-status');
+            if (snap.val() === true) {
+                statusEl.className = "bg-green-500";
+                console.log("Firebase Connected");
+            } else {
+                statusEl.className = "bg-red-600";
+                console.warn("Firebase Disconnected");
+            }
+        });
 
         window.showPage = (p) => {
             document.querySelectorAll('.page-content').forEach(el => el.classList.remove('active'));
@@ -52,30 +74,29 @@
             let rev = 0; const stats = {};
             activeDiv.innerHTML = ''; 
 
+            if(!data) {
+                activeDiv.innerHTML = '<p class="text-gray-400">目前無訂單</p>';
+                document.getElementById('total-rev').innerText = "$ 0";
+                return;
+            }
+
             for (let id in data) {
                 const o = data[id];
                 rev += o.price;
-
-                // 解析內容：格式為 "1份 x [2球]|口味|配料 ## 2份 x [3球]|口味|配料"
                 const orders = o.items.split(' ## ');
                 const orderItemsHTML = orders.map(orderStr => {
                     const [qty, detail] = orderStr.split(' x ');
                     const [plan, flavors, tops] = detail.split('|');
-                    
-                    // 統計累計
                     flavors.split('+').forEach(f => stats[f] = (stats[f]||0) + parseInt(qty));
                     tops.split(',').forEach(t => {
                         const [name, count] = t.split('x');
                         stats[name] = (stats[name]||0) + (parseInt(count) * parseInt(qty));
                     });
-
                     return `
                         <div class="item-row">
-                            <div class="flex justify-between font-black text-blue-700">
-                                <span>${qty} ${plan}</span>
-                            </div>
+                            <div class="font-black text-blue-700">${qty}份 ${plan}</div>
                             <div class="text-xl font-bold mt-1 text-black">${flavors.replace(/\+/g, ' + ')}</div>
-                            <div class="text-sm text-gray-500 mt-1">└ 配料: ${tops}</div>
+                            <div class="text-xs text-gray-500 mt-1">└ 配料: ${tops}</div>
                         </div>`;
                 }).join('');
 
@@ -83,10 +104,7 @@
                     const card = document.createElement('div');
                     card.className = `order-card p-4 ${o.status==='ready'?'bg-yellow-50 border-blue-600':''}`;
                     card.innerHTML = `
-                        <div class="flex justify-between items-start mb-2">
-                            <span class="text-4xl font-black">#${o.orderNum}</span>
-                            <span class="bg-black text-white px-2 py-1 text-sm">$${o.price}</span>
-                        </div>
+                        <div class="flex justify-between items-start mb-2"><span class="text-4xl font-black">#${o.orderNum}</span><span class="bg-black text-white px-2 py-1 text-sm font-bold">$${o.price}</span></div>
                         <div class="border-t-2 border-black mt-2">${orderItemsHTML}</div>
                         <div class="mt-4 flex gap-2">
                             ${o.status==='waiting'?
