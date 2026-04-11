@@ -31,7 +31,7 @@
         </div>
 
         <div id="tab-history" class="tab-content">
-            <h2 class="text-xl font-bold mb-4 border-l-4 border-gray-500 pl-2 text-gray-700">最近完成紀錄 (50筆)</h2>
+            <h2 class="text-xl font-bold mb-4 border-l-4 border-gray-500 pl-2 text-gray-700">最近完成紀錄 (300筆)</h2>
             <div id="history-orders" class="grid gap-3"></div>
         </div>
 
@@ -83,7 +83,7 @@
             allOrders.sort((a, b) => b.timestamp - a.timestamp);
 
             renderActive(allOrders.filter(o => o.status === 'waiting' || o.status === 'ready'));
-            renderHistory(allOrders.filter(o => o.status === 'done').slice(0, 50));
+            renderHistory(allOrders.filter(o => o.status === 'done').slice(0, 300));
             renderStats(allOrders);
         });
 
