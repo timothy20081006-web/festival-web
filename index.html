@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>214 Look In My Ice 🍦👀</title>
+    <title>Look In My Ice 🍦👀</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { font-family: sans-serif; background: #fff5f7; }
@@ -11,29 +11,165 @@
     </style>
 </head>
 <body class="p-4 flex flex-col items-center">
-    <div class="max-w-md w-full bg-white rounded-3xl shadow-xl p-6 border border-pink-100 relative">
-        <h1 class="text-2xl font-black text-center text-pink-600 mb-6 relative z-10">Look In My Ice🍦👀</h1>
-        
+    
+    <div class="max-w-md w-full bg-white rounded-3xl shadow-xl p-6 border border-pink-100 relative mt-10">
         <div class="absolute -top-10 -left-10 text-8xl opacity-10 rotate-12 z-0">🍦</div>
         <div class="absolute -bottom-10 -right-10 text-8xl opacity-10 -rotate-12 z-0">👀</div>
 
+        <h1 class="text-2xl font-black text-center text-pink-600 mb-6 relative z-10">Look In My Ice 🍦👀</h1>
+        
         <div class="grid grid-cols-2 gap-2 mb-6">
-            <button onclick="setPlan('single', 67, 1, 2)" id="plan-single" class="plan-btn border-2 p-3 rounded-xl font-bold text-pink-600">1球套餐 $67</button>
-            <button onclick="setPlan('double', 100, 2, 3)" id="plan-double" class="plan-btn border-2 p-3 rounded-xl font-bold text-pink-600">2球套餐 $100</button>
+            <button onclick="setPlan('single', 67, 1)" id="plan-single" class="plan-btn border-2 p-3 rounded-xl font-bold text-pink-600 transition-all">1球套餐 $67</button>
+            <button onclick="setPlan('double', 100, 2)" id="plan-double" class="plan-btn border-2 p-3 rounded-xl font-bold text-pink-600 transition-all">2球套餐 $100</button>
         </div>
 
-        <div id="order-area" class="hidden">
+        <div id="order-area" class="hidden relative z-10">
             <div class="mb-6">
                 <p class="font-bold mb-2 text-gray-700">選擇口味：</p>
-                <div id="flavor-selectors" class="space-y-2"></div>
+                <div id="flavor-selectors" class="space-y-2">
+                    </div>
             </div>
-            <div class="mb-6 relative">
-                <p id="top-title" class="font-bold mb-2 text-gray-700">選擇配料 (1球2份/2球3份)：</p>
-                <div class="space-y-2" id="topping-list"></div>
-                <button onclick="addToCart()" class="w-full bg-pink-500 text-white font-bold py-3 rounded-xl mt-6">＋ 加入購物車</button>
-            </div>
-        </div>
 
+            <div class="mb-6 relative">
+                <p id="top-title" class="font-bold mb-2 text-gray-700">選擇配料：</p>
+                <div class="space-y-2" id="topping-list">
+                    </div>
+                <button onclick="addToCart()" class="w-full bg-pink-500 text-white font-bold py-4 rounded-xl mt-6 shadow-lg hover:bg-pink-600 transition-all">確認送出訂單</button>
+            </div>
         </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+        import { getDatabase, ref, push, set, runTransaction } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
+
+        // Firebase 設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyBw2axh4vgkOnNEsUgYbkmmV71TJN5Yzqc",
+            authDomain: "school-festival-pos-f2c1e.firebaseapp.com",
+            databaseURL: "https://school-festival-pos-f2c1e-default-rtdb.firebaseio.com",
+            projectId: "school-festival-pos-f2c1e",
+            storageBucket: "school-festival-pos-f2c1e.firebasestorage.app",
+            messagingSenderId: "135308112776",
+            appId: "1:135308112776:web:6935bd537916dbbda9c03d"
+        };
+
+        const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
+        const db = getDatabase(app);
+
+        let curPlan = null;
+        let curTops = {"珍珠":0,"寒天":0,"碎餅乾":0,"棉花糖":0,"脆迪酥":0};
+
+        // 1. 選擇套餐邏輯
+        window.setPlan = (id, price, mainCnt) => {
+            // 規則：1球配2份，2球配3份
+            const topLimit = (mainCnt === 1) ? 2 : 3;
+            curPlan = { id, price, mainCnt, topLimit };
+            
+            // 更新按鈕樣式
+            document.querySelectorAll('.plan-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('plan-'+id).classList.add('active');
+            
+            // 顯示點餐區域
+            document.getElementById('order-area').classList.remove('hidden');
+            document.getElementById('top-title').innerText = `選擇配料 (限 ${topLimit} 份)：`;
+
+            // 動態生成口味選單
+            const flavorArea = document.getElementById('flavor-selectors');
+            flavorArea.innerHTML = '';
+            for(let i=1; i<=mainCnt; i++) {
+                flavorArea.innerHTML += `
+                    <select class="f-sel w-full border-2 p-3 rounded-xl font-bold bg-gray-50 mb-2 focus:border-pink-500 outline-none">
+                        <option value="椰奶">椰奶</option>
+                        <option value="荔枝">荔枝</option>
+                        <option value="Oreo">Oreo</option>
+                    </select>`;
+            }
+            
+            // 重設配料數量並刷新 UI
+            Object.keys(curTops).forEach(k => curTops[k] = 0);
+            updateTopUI();
+        };
+
+        // 2. 配料增減邏輯
+        window.changeTop = (name, delta) => {
+            const currentTotal = Object.values(curTops).reduce((a, b) => a + b, 0);
+            
+            if (delta > 0 && currentTotal >= curPlan.topLimit) {
+                alert(`這份套餐配料上限是 ${curPlan.topLimit} 份喔！`);
+                return;
+            }
+            if (delta < 0 && curTops[name] <= 0) return;
+            
+            curTops[name] += delta;
+            updateTopUI();
+        };
+
+        // 3. 刷新配料介面
+        function updateTopUI() {
+            const topArea = document.getElementById('topping-list');
+            topArea.innerHTML = Object.keys(curTops).map(name => `
+                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                    <span class="font-bold">${name}</span>
+                    <div class="flex items-center gap-4">
+                        <button onclick="changeTop('${name}', -1)" class="w-8 h-8 border-2 border-pink-200 rounded-full font-bold bg-white">-</button>
+                        <span class="font-black w-4 text-center text-pink-600">${curTops[name]}</span>
+                        <button onclick="changeTop('${name}', 1)" class="w-8 h-8 border-2 border-pink-200 rounded-full font-bold bg-white">+</button>
+                    </div>
+                </div>`).join('');
+        }
+
+        // 4. 送出訂單邏輯
+        window.addToCart = async () => {
+            if (!curPlan) return;
+
+            const flavors = Array.from(document.querySelectorAll('.f-sel')).map(s => s.value).join('+');
+            const selectedTops = Object.entries(curTops)
+                .filter(t => t[1] > 0)
+                .map(t => `${t[0]}x${t[1]}`)
+                .join(',');
+
+            // 格式：1份 2球|椰奶+荔枝|珍珠x2,寒天x1
+            const itemStr = `1份 ${curPlan.mainCnt}球|${flavors}|${selectedTops || '無'}`;
+            
+            if(confirm(`確定要送出訂單嗎？\n內容：${flavors} / ${selectedTops || '無配料'}`)) {
+                try {
+                    // 自動跳號邏輯
+                    const numRef = ref(db, 'currentNumber');
+                    const result = await runTransaction(numRef, (current) => {
+                        return (current || 100) + 1;
+                    });
+                    const newNum = result.snapshot.val();
+                    
+                    // 寫入訂單到 Firebase
+                    const newOrderRef = push(ref(db, 'orders'));
+                    await set(newOrderRef, {
+                        orderNum: newNum,
+                        items: itemStr,
+                        price: curPlan.price,
+                        status: 'waiting',
+                        timestamp: Date.now()
+                    });
+                    
+                    // 成功畫面
+                    document.body.innerHTML = `
+                        <div class="flex flex-col items-center justify-center h-screen p-10 text-center">
+                            <div class="bg-white p-8 rounded-3xl shadow-2xl border-4 border-green-500">
+                                <h1 class="text-2xl font-black mb-4">訂單已成功送出！</h1>
+                                <p class="text-gray-500 mb-2">請記住您的號碼：</p>
+                                <div class="text-9xl font-black text-green-600 mb-8">#${newNum}</div>
+                                <div class="text-left bg-gray-50 p-4 rounded-xl mb-8 text-sm text-gray-600 border border-dashed border-gray-300">
+                                    ${itemStr.replace('|', '<br>口味：').replace('|', '<br>配料：')}
+                                </div>
+                                <button onclick="location.reload()" class="w-full bg-blue-500 text-white px-8 py-4 rounded-full font-bold text-xl">再點一單</button>
+                            </div>
+                        </div>`;
+                } catch (e) {
+                    alert("送出失敗，請檢查網路連線！錯誤：" + e.message);
+                }
+            }
+        };
+    </script>
 </body>
 </html>
+
