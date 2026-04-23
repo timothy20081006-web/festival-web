@@ -9,11 +9,29 @@
         body { font-family: sans-serif; background: #fff5f7; }
         .plan-btn.active { background-color: #db2777; color: white; border-color: #db2777; }
         .cart-card { border-left: 5px solid #db2777; }
+                /* 1. 背景容器與圖案樣式 */
+        #bg-pattern {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0; pointer-events: none;
+        }
+        .bg-icon {
+            position: absolute;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        /* 2. 讓主卡片具有毛玻璃感，背景才透得過來 */
+        .main-card-effect {
+            background-color: rgba(255, 255, 255, 0.9) !important;
+            backdrop-filter: blur(8px);
+        }
     </style>
 </head>
 <body class="p-4 pb-24 flex flex-col items-center">
-    
-    <div class="max-w-md w-full bg-white rounded-3xl shadow-xl p-6 border border-pink-100 relative mt-4">
+    <div id="bg-pattern"></div>
+
+    <div class="max-w-md w-full main-card-effect rounded-3xl shadow-xl p-6 border border-pink-100 relative mt-4 z-10">
         <h1 class="text-2xl font-black text-center text-pink-600 mb-6">Look In My Ice 🍦👀</h1>
         
         <div class="grid grid-cols-2 gap-2 mb-6">
@@ -64,7 +82,40 @@
             appId: "1:135308112776:web:6935bd537916dbbda9c03d"
         };
         const db = getDatabase(!getApps().length ? initializeApp(firebaseConfig) : getApps()[0]);
+                // 背景素材檔案清單 (請確保圖片已上傳至 GitHub 相同資料夾)
+        const bgImages = ['1776918594799.png', '1776918594799(1).png', '1776918594799(2).png', '1776918594799(3).png', '1776918594799(4).png', '1776918594799(5).png'];
 
+        function initWallpaper() {
+            const container = document.getElementById('bg-pattern');
+            if (!container) return;
+            
+            // 根據螢幕面積動態決定圖片數量
+            const count = Math.floor(window.innerWidth * window.innerHeight / 28000); 
+
+            for (let i = 0; i < count; i++) {
+                const imgName = bgImages[Math.floor(Math.random() * bgImages.length)];
+                const icon = document.createElement('div');
+                icon.className = 'bg-icon';
+                icon.style.backgroundImage = `url('${imgName}')`;
+
+                // 隨機大小 (65px - 95px)
+                const size = Math.floor(Math.random() * 30) + 65;
+                icon.style.width = size + 'px';
+                icon.style.height = size + 'px';
+
+                // 隨機位置與輕微透明
+                icon.style.left = Math.random() * 100 + '%';
+                icon.style.top = Math.random() * 100 + '%';
+                icon.style.opacity = Math.random() * 0.15 + 0.1; // 設定 10%~25% 透明度
+                icon.style.transform = `rotate(${Math.random() * 40 - 20}deg)`;
+
+                container.appendChild(icon);
+            }
+        }
+
+        // 頁面載入完成後啟動
+        window.addEventListener('load', initWallpaper);
+        
         let cart = [];
         let curPlan = null;
         let curTops = {"珍珠":0,"寒天":0,"碎餅乾":0,"棉花糖":0,"脆迪酥":0};
