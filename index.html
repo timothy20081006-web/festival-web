@@ -37,25 +37,30 @@
 <body class="p-4 pb-24 flex flex-col items-center">
     <div id="bg-pattern"></div>
 
-    <div class="max-w-md w-full main-card-effect shadow-xl p-6 relative mt-4 z-10">
-    <h1 class="text-2xl font-black text-center text-green-800 mb-6">Look In My Ice 🍦👀</h1>
-        
+    <div class="max-w-md w-full bg-[#D8EAD0] rounded-xl shadow-lg relative mt-4 z-10 overflow-hidden border border-[#A6B896]/30">
+    <div class="py-6 px-4">
+        <h1 class="text-2xl font-black text-center text-[#2D4A22] flex items-center justify-center gap-2">
+            Look In My Ice 🍦👀
+        </h1>
     </div>
-        
-        <div class="grid grid-cols-2 gap-2 mb-6">
-            <button onclick="setPlan('single', 67, 1)" id="plan-single" class="plan-btn border-2 p-3 rounded-xl font-bold text-pink-600 transition-all">1球套餐 $67</button>
-            <button onclick="setPlan('double', 100, 2)" id="plan-double" class="plan-btn border-2 p-3 rounded-xl font-bold text-pink-600 transition-all">2球套餐 $100</button>
+    
+    <div class="bg-white/60 backdrop-blur-md p-6 rounded-t-[30px]">
+        <div class="grid grid-cols-2 gap-3 mb-6">
+            <button onclick="setPlan('single', 67, 1)" id="plan-single" class="plan-btn border-2 border-[#7A9460] p-3 rounded-xl font-bold text-[#7A9460] transition-all">1球套餐 $67</button>
+            <button onclick="setPlan('double', 100, 2)" id="plan-double" class="plan-btn border-2 border-[#7A9460] p-3 rounded-xl font-bold text-[#7A9460] transition-all">2球套餐 $100</button>
         </div>
 
-        <div id="order-area" class="hidden border-t pt-4">
-            <div id="flavor-selectors" class="mb-4 space-y-2"></div>
-            <p id="top-title" class="font-bold mb-2 text-pink-600 text-sm"></p>
-            <div id="topping-list" class="space-y-2 mb-4"></div>
-            <button onclick="addToCart()" class="w-full bg-pink-500 text-white font-bold py-3 rounded-xl shadow-lg active:scale-95 transition-all">
+        <div id="order-area" class="hidden border-t border-[#7A9460]/20 pt-4">
+            <div id="flavor-selectors" class="mb-4 space-y-3"></div>
+            <p id="top-title" class="font-bold mb-3 text-[#2D4A22] text-sm"></p>
+            <div id="topping-list" class="space-y-2 mb-6"></div>
+            <button onclick="addToCart()" class="w-full bg-[#D9418F] text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all text-lg">
                 加入購物車
             </button>
         </div>
     </div>
+</div>
+
 
     <div id="cart-container" class="max-w-md w-full mt-6 hidden">
         <div class="flex justify-between items-center mb-3 px-2">
