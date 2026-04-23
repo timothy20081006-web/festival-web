@@ -117,13 +117,22 @@
                 // 背景素材檔案清單 (請確保圖片已上傳至 GitHub 相同資料夾)
         const bgImages = ['1776918594799.png', '1776918594799(1).png', '1776918594799(2).png', '1776918594799(3).png', '1776918594799(4).png', '1776918594799(5).png'];
 
-                        function initWallpaper() {
+                                function initWallpaper() {
             const container = document.getElementById('bg-pattern');
             if (!container) return;
+            container.innerHTML = ''; // 清空舊的，避免重複生成
+
+            // 1. 強制設定容器寬度為視窗寬度，並確保從最左邊開始
+            container.style.width = '100vw';
+            container.style.position = 'fixed';
+            container.style.left = '0';
+            container.style.top = '0';
+
+            const spacing = 140; // 格子間距
             
-            const spacing = 150; // 間距
-            const cols = Math.ceil(window.innerWidth / spacing) + 1;
-            const rows = Math.ceil(window.innerHeight / spacing) + 1;
+            // 2. 關鍵修正：多計算幾列 (cols) 與幾行 (rows)，確保鋪滿且超出邊界
+            const cols = Math.ceil(window.innerWidth / spacing) + 3; 
+            const rows = Math.ceil(window.innerHeight / spacing) + 3;
 
             let imgIdx = 0;
             for (let r = 0; r < rows; r++) {
@@ -133,23 +142,21 @@
                     icon.className = 'bg-icon';
                     icon.style.backgroundImage = `url('${imgName}')`;
 
-                    icon.style.width = '80px';
-                    icon.style.height = '80px';
+                    icon.style.width = '85px';
+                    icon.style.height = '85px';
                     
-                    // 整齊的網格座標
-                    icon.style.left = (c * spacing) + 'px';
-                    icon.style.top = (r * spacing) + 'px';
+                    // 3. 讓起始點稍微往左偏移一些 (-40px)，消除邊緣可能的空白
+                    icon.style.left = (c * spacing - 40) + 'px';
+                    icon.style.top = (r * spacing - 40) + 'px';
                     
-                    icon.style.opacity = '0.2';
-                    // 統一傾斜角度
-                    icon.style.transform = 'rotate(-20deg)';
+                    // 顏色與旋轉設定 (已移除粉色調)
+                    icon.style.opacity = '0.12';
+                    icon.style.transform = 'rotate(-15deg)';
 
                     container.appendChild(icon);
                     imgIdx++;
                 }
             }
-            // 最後讓整個容器稍微偏移，避免完全貼齊邊緣
-            container.style.transform = 'translate(-20px, -20px)';
         }
 
 
