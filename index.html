@@ -85,45 +85,41 @@
                 // 背景素材檔案清單 (請確保圖片已上傳至 GitHub 相同資料夾)
         const bgImages = ['1776918594799.png', '1776918594799(1).png', '1776918594799(2).png', '1776918594799(3).png', '1776918594799(4).png', '1776918594799(5).png'];
 
-                function initWallpaper() {
+                        function initWallpaper() {
             const container = document.getElementById('bg-pattern');
             if (!container) return;
             
-            // 設定想要在兩側顯示的總數量 (例如左右各放 3-4 個)
-            const count = 8; 
+            const spacing = 150; // 間距
+            const cols = Math.ceil(window.innerWidth / spacing) + 1;
+            const rows = Math.ceil(window.innerHeight / spacing) + 1;
 
-            for (let i = 0; i < count; i++) {
-                const imgName = bgImages[Math.floor(Math.random() * bgImages.length)];
-                const icon = document.createElement('div');
-                icon.className = 'bg-icon';
-                icon.style.backgroundImage = `url('${imgName}')`;
+            let imgIdx = 0;
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const imgName = bgImages[imgIdx % bgImages.length];
+                    const icon = document.createElement('div');
+                    icon.className = 'bg-icon';
+                    icon.style.backgroundImage = `url('${imgName}')`;
 
-                // 1. 設定固定大小 (適合手機的大小)
-                const size = 110; 
-                icon.style.width = size + 'px';
-                icon.style.height = size + 'px';
+                    icon.style.width = '80px';
+                    icon.style.height = '80px';
+                    
+                    // 整齊的網格座標
+                    icon.style.left = (c * spacing) + 'px';
+                    icon.style.top = (r * spacing) + 'px';
+                    
+                    icon.style.opacity = '0.2';
+                    // 統一傾斜角度
+                    icon.style.transform = 'rotate(-20deg)';
 
-                // 2. 決定出現在左邊還是右邊
-                const isLeft = i < (count / 2);
-                
-                // 3. 設定位置：左右隨機靠邊，高度隨機分佈
-                if (isLeft) {
-                    icon.style.left = '-20px'; // 稍微往左邊移出一點點，比較自然
-                } else {
-                    icon.style.right = '-20px'; // 稍微往右邊移出一點點
+                    container.appendChild(icon);
+                    imgIdx++;
                 }
-                
-                // 高度隨機分佈在螢幕 0% 到 90% 之間
-                icon.style.top = (Math.random() * 90) + '%';
-
-                // 4. 設定透明度與旋轉
-                icon.style.opacity = '0.4'; // 既然變少了，可以稍微清楚一點
-                const rotate = isLeft ? (Math.random() * 20) : (Math.random() * -20);
-                icon.style.transform = `rotate(${rotate}deg)`;
-
-                container.appendChild(icon);
             }
+            // 最後讓整個容器稍微偏移，避免完全貼齊邊緣
+            container.style.transform = 'translate(-20px, -20px)';
         }
+
 
         // 頁面載入完成後啟動
         window.addEventListener('load', initWallpaper);
