@@ -7,32 +7,51 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
     <style>
-    body { font-family: sans-serif; background: #f0f4e8; } /* 背景改為淡綠色呼應主題 */
-    .plan-btn.active { background-color: #7A9460; color: white; border-color: #5F744A; }
-    .cart-card { border-left: 5px solid #7A9460; }
-
-    #bg-pattern {
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        z-index: 0; pointer-events: none;
+    <style>
+    /* 全面移除粉紅，改用抹茶與森林綠色系 */
+    body { 
+        font-family: sans-serif; 
+        background: #f0f4e8; /* 淺抹茶色底 */
     }
+
+    /* 抹茶牛奶主卡片 */
+    .main-card-effect {
+        background-color: #D8EAD0 !important; 
+        border-radius: 12px !important; /* 縮小圓角 */
+        border: 1px solid #A6B896;
+        backdrop-filter: blur(8px);
+    }
+
+    /* 選單按鈕：選中時變深綠色 */
+    .plan-btn {
+        border-color: #7A9460;
+        color: #7A9460;
+    }
+    .plan-btn.active { 
+        background-color: #7A9460 !important; 
+        color: white !important; 
+        border-color: #5F744A !important; 
+    }
+
+    /* 購物車區塊樣式 */
+    .cart-card { border-left: 5px solid #7A9460; }
+    
+    /* 數量加減按鈕與加入購物車按鈕：全面改為森林深綠 */
+    .btn-green-action {
+        background-color: #5F744A !important;
+        color: white !important;
+    }
+
+    /* 原本背景圖片透明度調低 */
     .bg-icon {
         position: absolute;
         background-size: contain;
         background-repeat: no-repeat;
         background-position: center;
-    }
-
-    /* 關鍵修改：主卡片樣式 */
-    .main-card-effect {
-        /* 抹茶綠色調：根據你的菜單設計調整 */
-        background-color: rgba(216, 234, 208, 0.95) !important; 
-        backdrop-filter: blur(8px);
-        /* 圓角縮小：從原本的 rounded-3xl 改為較俐落的 16px */
-        border-radius: 16px !important; 
-        border: 1px solid rgba(122, 148, 96, 0.3);
+        opacity: 0.1 !important; /* 調淡背景圖案 */
     }
 </style>
+
 </head>
 <body class="p-4 pb-24 flex flex-col items-center">
     <div id="bg-pattern"></div>
