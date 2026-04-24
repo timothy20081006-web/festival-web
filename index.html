@@ -174,27 +174,25 @@
         let curPlan = null;
         let curTops = {"珍珠":0,"寒天":0,"碎餅乾":0,"棉花糖":0,"脆迪酥":0};
 
-        window.setPlan = (id, price, mainCnt, displayName) => {
-            // 判斷配料數量限制
+                window.setPlan = (id, price, mainCnt, displayName) => {
+            // 1. 設定限額邏輯
             let limit = 0;
-            
-            // 修改這裡：讓 panna_1 和 panna_2 都沒有配料
             if (id === 'panna_1' || id === 'panna_2') {
-                limit = 0;
+                limit = 0; // 單奶酪、雙奶酪無配料
             } else if (id === 'mix') {
-                limit = 2; // 1球冰+奶酪 套餐給 2 份配料
+                limit = 2; // 混合套餐 2 份
             } else {
-                // 純冰淇淋套餐：1球給 2 份，2球給 3 份
-                limit = (mainCnt === 1) ? 2 : 3; 
+                limit = (mainCnt === 1) ? 2 : 3; // 1球冰2份，2球冰3份
             }
             
             curPlan = { id, price, mainCnt, limit, displayName };
             
+            // 2. UI 狀態更新
             document.querySelectorAll('.plan-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('plan-'+id).classList.add('active');
             document.getElementById('order-area').classList.remove('hidden');
             
-            // --- 口味選擇器 (冰淇淋) ---
+            // 3. 處理口味選擇器
             const fArea = document.getElementById('flavor-selectors');
             if (mainCnt > 0) {
                 fArea.innerHTML = '<p class="font-bold text-[#2D4A22] text-xs">冰淇淋口味：</p>';
@@ -207,23 +205,25 @@
                 fArea.classList.add('hidden');
             }
 
-            // --- 關鍵修改：處理配料顯示 ---
+            // 4. 關鍵修復：處理配料區顯示與「重新繪製」
             const topTitle = document.getElementById('top-title');
             const topList = document.getElementById('topping-list');
 
+            // 每次切換品項時，都先重設配料數量為 0，避免 A 品項的配料帶到 B 品項
+            Object.keys(curTops).forEach(n => curTops[n] = 0);
+
             if (limit === 0) {
-                // 如果限額是 0，直接顯示提示並隱藏清單
                 topTitle.innerText = "此品項不含配料";
-                topTitle.className = "font-bold mb-3 text-gray-400 text-sm italic"; // 變成灰色斜體
+                topTitle.className = "font-bold mb-3 text-gray-400 text-sm italic";
                 topList.innerHTML = ""; 
                 topList.classList.add('hidden');
             } else {
-                // 如果有配料，顯示限額並更新 UI
                 topTitle.innerText = `配料 (限 ${limit} 份)：`;
-                topTitle.className = "font-bold mb-3 text-[#2D4A22] text-sm"; // 恢復綠色
+                topTitle.className = "font-bold mb-3 text-[#2D4A22] text-sm";
                 topList.classList.remove('hidden');
-                Object.keys(curTops).forEach(n => curTops[n] = 0);
-                updateTopUI();
+                
+                // 重點：一定要呼叫 updateTopUI() 才會把按鈕畫出來
+                updateTopUI(); 
             }
         };
 
