@@ -174,16 +174,18 @@
         let curPlan = null;
         let curTops = {"珍珠":0,"寒天":0,"碎餅乾":0,"棉花糖":0,"脆迪酥":0};
 
-                window.setPlan = (id, price, mainCnt, displayName) => {
+        window.setPlan = (id, price, mainCnt, displayName) => {
             // 判斷配料數量限制
-            // 如果是單點奶酪 (panna_1)，配料限額設為 0
             let limit = 0;
-            if (id === 'panna_1') {
+            
+            // 修改這裡：讓 panna_1 和 panna_2 都沒有配料
+            if (id === 'panna_1' || id === 'panna_2') {
                 limit = 0;
-            } else if (id === 'panna_2' || id === 'mix') {
-                limit = 2; // 兩個奶酪或混合套餐給 2 份
+            } else if (id === 'mix') {
+                limit = 2; // 1球冰+奶酪 套餐給 2 份配料
             } else {
-                limit = (mainCnt === 1) ? 2 : 3; // 1球冰2份，2球冰3份
+                // 純冰淇淋套餐：1球給 2 份，2球給 3 份
+                limit = (mainCnt === 1) ? 2 : 3; 
             }
             
             curPlan = { id, price, mainCnt, limit, displayName };
@@ -192,7 +194,7 @@
             document.getElementById('plan-'+id).classList.add('active');
             document.getElementById('order-area').classList.remove('hidden');
             
-            // 口味選擇器邏輯 (保持不變)
+            // --- 口味選擇器 (冰淇淋) ---
             const fArea = document.getElementById('flavor-selectors');
             if (mainCnt > 0) {
                 fArea.innerHTML = '<p class="font-bold text-[#2D4A22] text-xs">冰淇淋口味：</p>';
@@ -210,11 +212,15 @@
             const topList = document.getElementById('topping-list');
 
             if (limit === 0) {
+                // 如果限額是 0，直接顯示提示並隱藏清單
                 topTitle.innerText = "此品項不含配料";
-                topList.innerHTML = ""; // 清空配料清單
+                topTitle.className = "font-bold mb-3 text-gray-400 text-sm italic"; // 變成灰色斜體
+                topList.innerHTML = ""; 
                 topList.classList.add('hidden');
             } else {
+                // 如果有配料，顯示限額並更新 UI
                 topTitle.innerText = `配料 (限 ${limit} 份)：`;
+                topTitle.className = "font-bold mb-3 text-[#2D4A22] text-sm"; // 恢復綠色
                 topList.classList.remove('hidden');
                 Object.keys(curTops).forEach(n => curTops[n] = 0);
                 updateTopUI();
