@@ -6,8 +6,6 @@
     <title>Look In My Ice 🍦👀</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-    <style>
-    <style>
     /* 全面移除粉紅，改用抹茶與森林綠色系 */
     body { 
         font-family: sans-serif; 
@@ -174,7 +172,7 @@
         let curPlan = null;
         let curTops = {"珍珠":0,"寒天":0,"碎餅乾":0,"棉花糖":0,"脆迪酥":0};
 
-                window.setPlan = (id, price, mainCnt, displayName) => {
+        window.setPlan = (id, price, mainCnt, displayName) => {
             // 1. 設定限額邏輯
             let limit = 0;
             if (id === 'panna_1' || id === 'panna_2') {
@@ -229,16 +227,34 @@
 
         function updateTopUI() {
             const area = document.getElementById('topping-list');
+            if (!area || !curPlan) return; // 如果區域不存在或還沒選方案，就不跑
+            
+            // 繪製配料清單的 HTML
             area.innerHTML = Object.keys(curTops).map(n => `
-                <div class="flex justify-between items-center bg-gray-50 p-2 rounded-lg border">
+                <div class="flex justify-between items-center bg-gray-50 p-2 rounded-lg border border-[#A6B896]/20">
                     <span class="font-bold text-gray-700">${n}</span>
                     <div class="flex items-center gap-3">
-                        <button onclick="changeTop('${n}',-1)" class="w-7 h-7 border rounded-full bg-white">-</button>
+                        <button onclick="changeTop('${n}',-1)" class="w-8 h-8 border rounded-full bg-white text-[#5F744A] border-[#A6B896] flex items-center justify-center font-bold">-</button>
+                        
                         <span class="font-black text-[#5F744A] w-4 text-center">${curTops[n]}</span>
-                        <button onclick="changeTop('${n}',1)" class="w-7 h-7 border rounded-full bg-white">+</button>
+                        
+                        <button onclick="changeTop('${n}',1)" class="w-8 h-8 border rounded-full bg-white text-[#5F744A] border-[#A6B896] flex items-center justify-center font-bold">+</button>
                     </div>
                 </div>`).join('');
         }
+        // 補上遺失的配料數量增減函數
+        window.changeTop = (n, d) => {
+            if(!curPlan) return; 
+            
+            const total = Object.values(curTops).reduce((a,b)=>a+b, 0);
+            
+            // 檢查是否超過限額 (加號時) 或 低於 0 (減號時)
+            if(d > 0 && total >= curPlan.limit) return;
+            if(d < 0 && curTops[n] <= 0) return;
+            
+            curTops[n] += d;
+            updateTopUI(); // 更新數值後重新繪製畫面
+        };
 
         // 找到這段並替換
         window.addToCart = () => {
