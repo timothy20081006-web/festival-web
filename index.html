@@ -174,42 +174,51 @@
         let curPlan = null;
         let curTops = {"珍珠":0,"寒天":0,"碎餅乾":0,"棉花糖":0,"脆迪酥":0};
 
-        // 找到這段並替換
-        window.setPlan = (id, price, mainCnt, displayName) => {
-             // 判斷配料數量限制：奶酪或混合餐限 2 份，1球冰 2 份，2球冰 3 份
-             const limit = (id.includes('panna') || id === 'mix') ? 2 : (mainCnt === 1 ? 2 : 3);
-    
-             // 將 displayName 存入 curPlan，這樣購物車才會顯示正確名稱
-             curPlan = { id, price, mainCnt, limit, displayName };
-    
-             document.querySelectorAll('.plan-btn').forEach(b => b.classList.remove('active'));
-             document.getElementById('plan-'+id).classList.add('active');
-             document.getElementById('order-area').classList.remove('hidden');
-             document.getElementById('top-title').innerText = `配料 (限 ${limit} 份)：`;
-    
-             const fArea = document.getElementById('flavor-selectors');
-             // 如果 mainCnt > 0 代表有冰淇淋，才顯示口味選擇
-             if (mainCnt > 0) {
-             fArea.innerHTML = '<p class="font-bold text-[#2D4A22] text-xs">冰淇淋口味：</p>';
-             for(let i=0; i<mainCnt; i++) {
-             fArea.innerHTML += `<select class="f-sel w-full border-2 p-2 rounded-lg font-bold border-[#A6B896]"><option>椰奶</option><option>荔枝</option><option>Oreo</option></select>`;
-             }
-             fArea.classList.remove('hidden');
-             } else {
-             fArea.innerHTML = '';
-             fArea.classList.add('hidden');
-             }
-             Object.keys(curTops).forEach(n => curTops[n] = 0);
-             updateTopUI();
-        };
+                window.setPlan = (id, price, mainCnt, displayName) => {
+            // 判斷配料數量限制
+            // 如果是單點奶酪 (panna_1)，配料限額設為 0
+            let limit = 0;
+            if (id === 'panna_1') {
+                limit = 0;
+            } else if (id === 'panna_2' || id === 'mix') {
+                limit = 2; // 兩個奶酪或混合套餐給 2 份
+            } else {
+                limit = (mainCnt === 1) ? 2 : 3; // 1球冰2份，2球冰3份
+            }
+            
+            curPlan = { id, price, mainCnt, limit, displayName };
+            
+            document.querySelectorAll('.plan-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('plan-'+id).classList.add('active');
+            document.getElementById('order-area').classList.remove('hidden');
+            
+            // 口味選擇器邏輯 (保持不變)
+            const fArea = document.getElementById('flavor-selectors');
+            if (mainCnt > 0) {
+                fArea.innerHTML = '<p class="font-bold text-[#2D4A22] text-xs">冰淇淋口味：</p>';
+                for(let i=0; i<mainCnt; i++) {
+                    fArea.innerHTML += `<select class="f-sel w-full border-2 p-2 rounded-lg font-bold border-[#A6B896]"><option>椰奶</option><option>荔枝</option><option>Oreo</option></select>`;
+                }
+                fArea.classList.remove('hidden');
+            } else {
+                fArea.innerHTML = '';
+                fArea.classList.add('hidden');
+            }
 
+            // --- 關鍵修改：處理配料顯示 ---
+            const topTitle = document.getElementById('top-title');
+            const topList = document.getElementById('topping-list');
 
-        window.changeTop = (n, d) => {
-            const total = Object.values(curTops).reduce((a,b)=>a+b, 0);
-            if(d > 0 && total >= curPlan.limit) return;
-            if(d < 0 && curTops[n] <= 0) return;
-            curTops[n] += d;
-            updateTopUI();
+            if (limit === 0) {
+                topTitle.innerText = "此品項不含配料";
+                topList.innerHTML = ""; // 清空配料清單
+                topList.classList.add('hidden');
+            } else {
+                topTitle.innerText = `配料 (限 ${limit} 份)：`;
+                topList.classList.remove('hidden');
+                Object.keys(curTops).forEach(n => curTops[n] = 0);
+                updateTopUI();
+            }
         };
 
         function updateTopUI() {
