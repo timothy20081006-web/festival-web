@@ -82,27 +82,38 @@
             const allOrders = Object.entries(data).map(([id, val]) => ({ id, ...val }));
             allOrders.sort((a, b) => b.timestamp - a.timestamp);
 
-            renderActive(allOrders.filter(o => o.status === 'waiting' || o.status === 'ready'));
+            renderActive(allOrders.filter(o => o.status === 'waiting' || o.status === 'paid' || o.status === 'ready'));
             renderHistory(allOrders.filter(o => o.status === 'done').slice(0, 300));
             renderStats(allOrders);
         });
 
-        // 1. 渲染控制台
+        // 1. 渲染控制台 (新增收款按鈕邏輯)
         function renderActive(list) {
             const container = document.getElementById('active-orders');
             container.innerHTML = list.length ? '' : '<p class="text-gray-400 py-10 text-center">目前沒有製作中的訂單 🍵</p>';
             
             list.forEach(o => {
-                const isReady = o.status === 'ready';
+                const isWaiting = o.status === 'waiting'; // 剛送出，待收款
+                const isPaid = o.status === 'paid';       // 已收款，製作中
+                const isReady = o.status === 'ready';     // 已完成，待取餐
+                
                 const card = document.createElement('div');
-                card.className = `p-5 rounded-2xl shadow-sm border-l-8 flex justify-between items-center transition-all ${isReady ? 'bg-green-50 border-green-500' : 'bg-white border-pink-500'}`;
+                // 根據狀態改變顏色：待收款(橘色)、製作中(粉色)、請取餐(綠色)
+                let statusStyle = 'bg-white border-orange-400'; 
+                if (isPaid) statusStyle = 'bg-white border-pink-500';
+                if (isReady) statusStyle = 'bg-green-50 border-green-500';
+
+                card.className = `p-5 rounded-2xl shadow-sm border-l-8 flex justify-between items-center transition-all ${statusStyle}`;
                 
                 card.innerHTML = `
                     <div class="flex-1">
                         <div class="flex items-center gap-3">
                             <span class="text-3xl font-black text-gray-800">#${o.orderNum}</span>
-                            <span class="px-2 py-1 text-xs font-bold rounded ${isReady ? 'bg-green-200 text-green-700' : 'bg-pink-100 text-pink-600'}">
-                                ${isReady ? '🔔 請取餐中' : '👩‍🍳 製作中'}
+                            <span class="px-2 py-1 text-xs font-bold rounded ${
+                                isWaiting ? 'bg-orange-100 text-orange-600' : 
+                                (isReady ? 'bg-green-200 text-green-700' : 'bg-pink-100 text-pink-600')
+                            }">
+                                ${isWaiting ? '💰 待收款' : (isReady ? '🔔 請取餐中' : '👩‍🍳 製作中')}
                             </span>
                         </div>
                         <div class="text-sm text-blue-700 font-medium mt-2 leading-relaxed">
@@ -110,15 +121,18 @@
                         </div>
                     </div>
                     <div class="ml-4">
-                        ${isReady 
-                            ? `<button onclick="updateStatus('${o.id}', 'done')" class="bg-green-600 text-white px-6 py-4 rounded-xl font-bold shadow-md hover:bg-green-700 active:scale-95 transition-all text-lg">完成訂單</button>`
-                            : `<button onclick="updateStatus('${o.id}', 'ready')" class="bg-black text-white px-6 py-4 rounded-xl font-bold shadow-md hover:bg-gray-800 active:scale-95 transition-all text-lg">叫號 Ready</button>`
+                        ${isWaiting 
+                            ? `<button onclick="updateStatus('${o.id}', 'paid')" class="bg-orange-500 text-white px-6 py-4 rounded-xl font-bold shadow-md hover:bg-orange-600 active:scale-95 transition-all text-lg">確認收款</button>`
+                            : (isReady 
+                                ? `<button onclick="updateStatus('${o.id}', 'done')" class="bg-green-600 text-white px-6 py-4 rounded-xl font-bold shadow-md hover:bg-green-700 active:scale-95 transition-all text-lg">完成訂單</button>`
+                                : `<button onclick="updateStatus('${o.id}', 'ready')" class="bg-black text-white px-6 py-4 rounded-xl font-bold shadow-md hover:bg-gray-800 active:scale-95 transition-all text-lg">叫號 Ready</button>`)
                         }
                     </div>
                 `;
                 container.appendChild(card);
             });
         }
+
 
         // 2. 渲染歷史紀錄
         function renderHistory(list) {
