@@ -14,29 +14,53 @@
         }
     </style>
 </head>
-<body class="h-screen flex flex-row">
+<body class="h-screen flex flex-col bg-zinc-900 p-4">
 
-    <div class="w-1/3 border-r border-zinc-800 flex flex-col p-10 bg-zinc-950">
-        <h2 class="text-zinc-500 text-3xl font-black mb-10 tracking-widest uppercase">Preparing <br><span class="text-lg font-normal opacity-50">製作中</span></h2>
-        <div id="waitingArea" class="flex flex-wrap gap-6 text-5xl font-bold text-zinc-400">
-            </div>
+    <div class="flex justify-between items-end mb-4 px-2">
+        <h1 class="text-2xl font-black tracking-tighter text-white">叫號員監控面板 <span class="text-xs font-normal text-zinc-500 ml-2">Internal Use Only</span></h1>
+        <div class="flex gap-4 text-xs font-bold uppercase">
+            <span class="flex items-center gap-1 text-orange-400"><span class="w-2 h-2 bg-orange-400 rounded-full"></span> 待收款</span>
+            <span class="flex items-center gap-1 text-blue-400"><span class="w-2 h-2 bg-blue-400 rounded-full"></span> 製作中</span>
+            <span class="flex items-center gap-1 text-emerald-400"><span class="w-2 h-2 bg-emerald-400 rounded-full"></span> 請取餐</span>
+        </div>
     </div>
 
-    <div class="w-2/3 flex flex-col p-10 bg-black relative">
-        <h2 class="text-emerald-500 text-3xl font-black mb-10 tracking-[0.5em] uppercase">Now Ready <br><span class="text-lg font-normal text-emerald-700">請至櫃檯取餐</span></h2>
+    <div class="flex-1 flex gap-4 overflow-hidden">
         
-        <div id="readyArea" class="flex flex-wrap justify-center content-start gap-x-16 gap-y-8 w-full text-[18rem] font-black text-white glow-ready">
+        <div class="flex-1 bg-zinc-950 rounded-2xl border border-zinc-800 flex flex-col">
+            <div class="p-4 border-b border-zinc-800 bg-orange-500/10 text-orange-500 font-bold flex justify-between">
+                <span>1. 待付款</span>
+                <span id="count-waiting" class="text-xs bg-orange-500 text-white px-2 rounded-full">0</span>
             </div>
-
-        <div class="absolute bottom-10 right-10 text-zinc-800 text-xl font-bold tracking-widest">
-            ICE CREAM PICKUP SYSTEM
+            <div id="waitingArea" class="p-4 flex flex-wrap gap-2 content-start overflow-y-auto">
+                </div>
         </div>
+
+        <div class="flex-1 bg-zinc-950 rounded-2xl border border-zinc-800 flex flex-col">
+            <div class="p-4 border-b border-zinc-800 bg-blue-500/10 text-blue-400 font-bold flex justify-between">
+                <span>2. 製作中 (已付)</span>
+                <span id="count-paid" class="text-xs bg-blue-500 text-white px-2 rounded-full">0</span>
+            </div>
+            <div id="paidArea" class="p-4 flex flex-wrap gap-2 content-start overflow-y-auto">
+                </div>
+        </div>
+
+        <div class="flex-1 bg-zinc-950 rounded-2xl border border-zinc-800 flex flex-col">
+            <div class="p-4 border-b border-zinc-800 bg-emerald-500/10 text-emerald-400 font-bold flex justify-between">
+                <span>3. 請取餐 (Ready)</span>
+                <span id="count-ready" class="text-xs bg-emerald-500 text-white px-2 rounded-full">0</span>
+            </div>
+            <div id="readyArea" class="p-4 flex flex-wrap gap-2 content-start overflow-y-auto">
+                </div>
+        </div>
+
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
         import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-database.js";
 
+        // Firebase 設定保持不變
         const firebaseConfig = {
             apiKey: "AIzaSyBw2axh4vgkOnNEsUgYbkmmV71TJN5Yzqc",
             authDomain: "school-festival-pos-f2c1e.firebaseapp.com",
@@ -51,42 +75,40 @@
 
         onValue(ref(db, 'orders'), (snapshot) => {
             const data = snapshot.val();
-            const waitingArea = document.getElementById('waitingArea');
-            const readyArea = document.getElementById('readyArea');
-            
-            waitingArea.innerHTML = '';
-            readyArea.innerHTML = '';
-            
-            const waitingList = [];
-            const readyList = [];
+            const areas = {
+                waiting: document.getElementById('waitingArea'),
+                paid: document.getElementById('paidArea'),
+                ready: document.getElementById('readyArea')
+            };
+            const counts = {
+                waiting: document.getElementById('count-waiting'),
+                paid: document.getElementById('count-paid'),
+                ready: document.getElementById('count-ready')
+            };
 
+            // 清空舊資料
+            Object.values(areas).forEach(a => a.innerHTML = '');
+            const lists = { waiting: [], paid: [], ready: [] };
+
+            // 分類訂單
             for (let id in data) {
                 const order = data[id];
-                // 重點：只有狀態為 paid (已付錢) 才進入製作中清單
-                if (order.status === 'paid') {
-                waitingList.push(order.orderNum);
-                } else if (order.status === 'ready') {
-                readyList.push(order.orderNum);
+                if (lists[order.status]) {
+                    lists[order.status].push(order.orderNum);
                 }
             }
 
+            // 渲染與更新計數
+            Object.keys(lists).forEach(status => {
+                lists[status].sort((a, b) => a - b);
+                counts[status].innerText = lists[status].length;
 
-            // 渲染製作中 (排序一下讓號碼整齊)
-            waitingList.sort((a,b) => a-b);
-            waitingArea.innerHTML = waitingList.map(n => `
-                <div class="bg-zinc-900 px-4 py-2 rounded-xl border border-zinc-800">${n}</div>
-            `).join('');
-
-            // 渲染請取餐
-            if (readyList.length === 0) {
-                readyArea.innerHTML = '<div class="mt-20 text-zinc-900 text-6xl tracking-widest opacity-30">WELCOME</div>';
-            } else {
-                readyArea.innerHTML = readyList.map(n => `
-                    <div class="number-ready animate-pulse">
+                areas[status].innerHTML = lists[status].map(n => `
+                    <div class="bg-zinc-800 text-white px-3 py-1.5 rounded-lg border border-zinc-700 text-xl font-mono font-bold shadow-inner">
                         ${n}
                     </div>
                 `).join('');
-            }
+            });
         });
     </script>
 </body>
