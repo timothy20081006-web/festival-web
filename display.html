@@ -62,12 +62,14 @@
 
             for (let id in data) {
                 const order = data[id];
-                if (order.status === 'waiting') {
-                    waitingList.push(order.orderNum);
+                // 重點：只有狀態為 paid (已付錢) 才進入製作中清單
+                if (order.status === 'paid') {
+                waitingList.push(order.orderNum);
                 } else if (order.status === 'ready') {
-                    readyList.push(order.orderNum);
+                readyList.push(order.orderNum);
                 }
             }
+
 
             // 渲染製作中 (排序一下讓號碼整齊)
             waitingList.sort((a,b) => a-b);
